@@ -1,0 +1,19 @@
+# Virtual environment
+venv/
+
+# Environment variables (contains API keys)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/*
+!.vscode/mcp.json
+*.code-workspace
+
+# OS
+Thumbs.db
+.DS_Store

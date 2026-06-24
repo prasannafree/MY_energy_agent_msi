@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="EnergyPlus MCP Agent - AI-powered building energy simulation assistant using Google Gemini">
+  <title>EnergyPlus MCP Agent</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>">
+</head>
+<body>
+  <!-- Background Effects -->
+  <div class="bg-effects"></div>
+
+  <!-- Main App -->
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header" id="header">
+      <div class="header-left">
+        <div class="header-icon">⚡</div>
+        <div>
+          <div class="header-title">EnergyPlus MCP Agent</div>
+          <div class="header-subtitle">Powered by Google Gemini</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="model-select-wrapper">
+          <select class="model-select" id="model-select" onchange="changeModel()">
+            <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+          </select>
+        </div>
+        <div class="status-badge" id="status-badge">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Connecting...</span>
+        </div>
+        <button class="tools-btn" id="tools-btn" onclick="toggleToolsModal()">
+          🔧 Tools
+        </button>
+      </div>
+    </header>
+
+    <!-- Alert Banner Container -->
+    <div id="alert-banner-container"></div>
+
+    <!-- Chat Area -->
+    <div class="chat-area" id="chat-area">
+      <!-- Welcome Screen -->
+      <div class="welcome-screen" id="welcome-screen">
+        <div class="welcome-icon">🏢</div>
+        <h1 class="welcome-title">EnergyPlus MCP Agent</h1>
+        <p class="welcome-desc">
+          Your AI assistant for building energy simulation. Ask me anything about 
+          EnergyPlus models — I can load, inspect, modify, and simulate IDF files 
+          using specialized tools.
+        </p>
+        <div class="suggestion-grid">
+          <div class="suggestion-card" onclick="useSuggestion('What tools do you have available?')">
+            <div class="suggestion-emoji">🔧</div>
+            <div class="suggestion-text">What tools do you have available?</div>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('List the sample IDF files available')">
+            <div class="suggestion-emoji">📁</div>
+            <div class="suggestion-text">List the sample IDF files available</div>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Load and summarize a sample EnergyPlus model')">
+            <div class="suggestion-emoji">📊</div>
+            <div class="suggestion-text">Load and summarize a sample model</div>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('How can I improve energy efficiency of a building model?')">
+            <div class="suggestion-emoji">💡</div>
+            <div class="suggestion-text">How to improve energy efficiency?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="input-wrapper" id="input-wrapper">
+        <textarea
+          id="message-input"
+          placeholder="Ask about EnergyPlus models..."
+          rows="1"
+          onkeydown="handleKeyDown(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
+          ➤
+        </button>
+      </div>
+      <div class="input-hint">
+        Press <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for new line
+      </div>
+    </div>
+  </div>
+
+  <!-- Tools Modal -->
+  <div class="modal-overlay" id="tools-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">🔧 Available MCP Tools</div>
+        <button class="modal-close" onclick="toggleToolsModal()">✕</button>
+      </div>
+      <div class="modal-body" id="tools-list">
+        <div class="tools-loading">Loading tools...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
