@@ -15,5 +15,5 @@ __pycache__/
 *.code-workspace
 
 # OS
-Thumbs.db
-.DS_Store
+.Trash-*
+*~
