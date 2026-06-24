@@ -22,11 +22,7 @@ const toolsList = document.getElementById("tools-list");
 // Initialization
 // ---------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
-  // Sync select dropdown with local state
-  const modelSelect = document.getElementById("model-select");
-  if (modelSelect) {
-    modelSelect.value = currentModel;
-  }
+  fetchModels();
   
   checkHealth();
   messageInput.addEventListener("input", () => {
@@ -35,6 +31,46 @@ document.addEventListener("DOMContentLoaded", () => {
   // Focus input on load
   messageInput.focus();
 });
+
+async function fetchModels() {
+  try {
+    const res = await fetch("/api/models");
+    const data = await res.json();
+    const select = document.getElementById("model-select");
+    if (!select || !data.models) return;
+    
+    const groups = { google: [], ollama: [] };
+    data.models.forEach(m => {
+      if (!groups[m.provider]) groups[m.provider] = [];
+      groups[m.provider].push(m);
+    });
+    
+    let html = "";
+    if (groups.google.length > 0) {
+      html += `<optgroup label="Google Gemini">`;
+      groups.google.forEach(m => html += `<option value="${m.id}">${m.name}</option>`);
+      html += `</optgroup>`;
+    }
+    
+    if (groups.ollama && groups.ollama.length > 0) {
+      html += `<optgroup label="Local Models (Ollama)">`;
+      groups.ollama.forEach(m => html += `<option value="${m.id}">${m.name}</option>`);
+      html += `</optgroup>`;
+    }
+    
+    select.innerHTML = html;
+    
+    const isModelValid = data.models.some(m => m.id === currentModel);
+    if (!isModelValid && data.models.length > 0) {
+      currentModel = data.models[0].id;
+      localStorage.setItem("selected_model", currentModel);
+    }
+    select.value = currentModel;
+    
+  } catch (err) {
+    console.error("Could not fetch models:", err);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Model Switching Logic

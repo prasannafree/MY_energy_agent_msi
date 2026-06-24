@@ -20,8 +20,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
+import httpx
 
 load_dotenv()
 
@@ -58,7 +60,10 @@ Your capabilities include:
 - Running EnergyPlus simulations and analyzing results
 - Modifying building envelopes
 
-Use your tools proactively. Be helpful and precise."""
+CRITICAL RULES:
+1. ALWAYS use your tools proactively. 
+2. If the user asks you to operate on a file but doesn't provide the exact path/name (e.g. "this one" or "a sample file"), DO NOT ask them for the path. Instead, immediately use your tools (like listing available sample files or checking the directory) to find the available files, and then either proceed or ask the user which specific one from the list they meant.
+3. Be helpful, precise, and concise."""
 
 # ---------------------------------------------------------------------------
 # Global state
@@ -76,10 +81,13 @@ def _get_executor(model_name: str):
     if not mcp_tools:
         return None
     if name not in agent_executors:
-        llm = ChatGoogleGenerativeAI(
-            model=name, google_api_key=GOOGLE_API_KEY,
-            temperature=0.1, convert_system_message_to_human=False,
-        )
+        if name.startswith("gemini"):
+            llm = ChatGoogleGenerativeAI(
+                model=name, google_api_key=GOOGLE_API_KEY,
+                temperature=0.1, convert_system_message_to_human=False,
+            )
+        else:
+            llm = ChatOllama(model=name, temperature=0.1)
         agent_executors[name] = create_react_agent(llm, mcp_tools, prompt=SYSTEM_PROMPT)
     return agent_executors[name]
 
@@ -249,6 +257,31 @@ async def health():
     }
 
 
+@app.get("/api/models")
+async def get_models():
+    models = [
+        {"id": "gemini-3.5-flash", "name": "Gemini 3.5 Flash", "provider": "google"},
+        {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "provider": "google"},
+        {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash", "provider": "google"},
+        {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro", "provider": "google"},
+    ]
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("http://localhost:11434/api/tags", timeout=2.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                for m in data.get("models", []):
+                    models.append({
+                        "id": m["name"],
+                        "name": m["name"],
+                        "provider": "ollama"
+                    })
+    except Exception as e:
+        logger.warning(f"Could not fetch Ollama models: {e}")
+        
+    return JSONResponse({"models": models})
+
+
 @app.post("/api/chat")
 async def chat(request: Request):
     try:
@@ -259,8 +292,8 @@ async def chat(request: Request):
         if not user_msg:
             return JSONResponse({"error": "Empty message"}, status_code=400)
 
-        if not GOOGLE_API_KEY:
-            return JSONResponse({"response": "⚠️ Set GOOGLE_API_KEY in .env and restart.", "tools_used": []})
+        if not GOOGLE_API_KEY and model.startswith("gemini"):
+            return JSONResponse({"response": "⚠️ Set GOOGLE_API_KEY in .env and restart to use Gemini models.", "tools_used": []})
 
         executor = _get_executor(model)
         if executor is None:
