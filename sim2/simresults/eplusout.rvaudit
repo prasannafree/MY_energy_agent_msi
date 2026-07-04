@@ -1,0 +1,16 @@
+ ReadVarsESO
+ processing:C:\Users\annaa\Downloads\IISC\sim1\ASHRAE901_ApartmentHighRise_STD2019_Denver_ce59ec.rvi
+ input file:C:\Users\annaa\Downloads\IISC\sim2\simresults\eplusout.eso
+ output file:C:\Users\annaa\Downloads\IISC\sim2\simresults\eplusout.csv
+ getting all vars from:C:\Users\annaa\Downloads\IISC\sim2\simresults\eplusout.eso
+  number variables requested for output=           1
+ ReadVars Run Time=00hr 00min  0.28sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:C:\Users\annaa\Downloads\IISC\sim1\ASHRAE901_ApartmentHighRise_STD2019_Denver_ce59ec.mvi
+ input file:C:\Users\annaa\Downloads\IISC\sim2\simresults\eplusout.mtr
+ output file:C:\Users\annaa\Downloads\IISC\sim2\simresults\eplusmtr.csv
+ getting all vars from:C:\Users\annaa\Downloads\IISC\sim2\simresults\eplusout.mtr
+  number variables requested for output=           5
+ ReadVars Run Time=00hr 00min  0.64sec
+ ReadVarsESO program completed successfully.

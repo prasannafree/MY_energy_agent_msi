@@ -1,0 +1,222 @@
+Program Version:,EnergyPlus, Version 26.1.0-6f2e40d102, YMD=2026.06.09 15:14
+Tabular Output Report in Format: ,Comma
+
+Building:,ApartmentHighRise
+Environment:,RUNPERIOD 1 ** New.Delhi-Gandhi.Intl.AP DL IND SRC-TMYx WMO#=421810
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY TASKPURPOSE PROGRESSINDICATOR
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CODENAME ASHRAE901
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CODEYEAR 2019
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CODEAMENDMENT NONEAMEND
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY PROTOTYPENAME APARTMENTHIGHRISE
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY TASKSCOPE NATIONAL
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY STATE NATIONAL
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CLIMATEZONE 5B
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY REPRESENTCITY USA_CO_DENVER
+FOR:,Meter
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB [],HEATING:NATURALGAS [J]
+,January,0.000,0.000
+,February,0.000,0.000
+,March,0.000,0.000
+,April,0.000,0.000
+,May,0.000,0.000
+,June,0.000,0.000
+,July,0.000,0.000
+,August,0.000,0.000
+,September,0.000,0.000
+,October,0.000,0.000
+,November,0.000,0.000
+,December,0.000,0.000
+,,,
+,Annual Sum or Average,0.000,0.000
+,Minimum of Months,0.000,0.000
+,Maximum of Months,0.000,0.000
+
+
