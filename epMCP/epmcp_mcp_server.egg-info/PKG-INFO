@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: epmcp-mcp-server
+Version: 0.1.0
+Summary: epMCP Tools MCP Server — Occupancy modification, calibration, and surrogate models
+Requires-Python: >=3.10
+Requires-Dist: mcp[cli]>=1.10
+Requires-Dist: geomeppy
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scipy
+Requires-Dist: scikit-learn

@@ -37,7 +37,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
 WORKSPACE_DIR = Path(__file__).parent.resolve()
 
-# Docker command to launch the MCP server
+# Docker command to launch the EnergyPlus MCP server
 MCP_SERVER_COMMAND = "docker"
 MCP_SERVER_ARGS = [
     "run", "--rm", "-i",
@@ -49,8 +49,22 @@ MCP_SERVER_ARGS = [
     "uv", "run", "--no-dev", "python", "-m", "energyplus_mcp_server.server",
 ]
 
+# Docker command to launch the epMCP tools server (same Docker image, different mount)
+EPMCP_SERVER_COMMAND = "docker"
+EPMCP_SERVER_ARGS = [
+    "run", "--rm", "-i",
+    "--user", "root",
+    "-v", f"{WORKSPACE_DIR / 'epMCP'}:/workspace/epMCP",
+    "-v", f"{WORKSPACE_DIR / 'EnergyPlus-MCP' / 'energyplus-mcp-server' / 'sample_files'}:/workspace/sample_files",
+    "-v", "epmcp-deps:/root/.cache/uv",
+    "-w", "/workspace/epMCP",
+    "energyplus-mcp-dev",
+    "uv", "run", "--no-dev", "python", "-m", "epmcp_mcp_server.server",
+]
+
 SYSTEM_PROMPT = """You are an EnergyPlus building energy simulation expert assistant.
-You have access to MCP tools that let you work with EnergyPlus IDF building models.
+You have access to MCP tools that let you work with EnergyPlus IDF building models,
+modify occupancy parameters, run calibration loops, and use surrogate models.
 
 Your capabilities include:
 - Loading and inspecting EnergyPlus IDF models
@@ -59,11 +73,19 @@ Your capabilities include:
 - Inspecting and modifying building components
 - Running EnergyPlus simulations and analyzing results
 - Modifying building envelopes
+- Modifying occupancy parameters globally across all zones (alter_occupancy_global_tool)
+- Running EnergyPlus simulations with geomeppy and getting CSV output (run_ep_simulation_tool)
+- Calculating RMSE between simulation and measured data (calculate_rmse_tool)
+- Automated calibration of occupancy against measured data using Nelder-Mead optimization (calibrate_occupancy_tool)
+- Training surrogate models from simulation cache data for instant calibration (train_surrogate_model_tool)
+- Using trained surrogate models for sub-second calibration predictions (predict_with_surrogate_tool)
 
 CRITICAL RULES:
 1. ALWAYS use your tools proactively. 
 2. If the user asks you to operate on a file but doesn't provide the exact path/name (e.g. "this one" or "a sample file"), DO NOT ask them for the path. Instead, immediately use your tools (like listing available sample files or checking the directory) to find the available files, and then either proceed or ask the user which specific one from the list they meant.
-3. Be helpful, precise, and concise."""
+3. Be helpful, precise, and concise.
+4. For occupancy modification, calibration, and surrogate model tasks, use the epMCP tools (alter_occupancy_global_tool, run_ep_simulation_tool, calibrate_occupancy_tool, etc.).
+5. Files inside the epMCP Docker container are accessible under /workspace/epMCP/ (for epMCP tools) and /workspace/ (for EnergyPlus-MCP tools)."""
 
 # ---------------------------------------------------------------------------
 # Global state
@@ -180,7 +202,7 @@ async def _initialize_mcp():
         return
 
     init_status = "connecting"
-    logger.info("Docker OK — connecting to MCP server…")
+    logger.info("Docker OK — connecting to MCP servers…")
 
     try:
         mcp_client = MultiServerMCPClient({
@@ -188,10 +210,15 @@ async def _initialize_mcp():
                 "command": MCP_SERVER_COMMAND,
                 "args": MCP_SERVER_ARGS,
                 "transport": "stdio",
-            }
+            },
+            "epmcp": {
+                "command": EPMCP_SERVER_COMMAND,
+                "args": EPMCP_SERVER_ARGS,
+                "transport": "stdio",
+            },
         })
         tools = await mcp_client.get_tools()
-        logger.info(f"Connected! {len(tools)} MCP tools available.")
+        logger.info(f"Connected! {len(tools)} MCP tools available (EnergyPlus-MCP + epMCP).")
         mcp_tools = _fix_tool_schemas(tools)
 
         # Pre-create the default model executor

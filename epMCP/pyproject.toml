@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epmcp-mcp-server"
+version = "0.1.0"
+description = "epMCP Tools MCP Server — Occupancy modification, calibration, and surrogate models"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.10",
+    "geomeppy",
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["epmcp_mcp_server*"]

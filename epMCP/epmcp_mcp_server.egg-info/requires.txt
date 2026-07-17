@@ -1,0 +1,6 @@
+mcp[cli]>=1.10
+geomeppy
+numpy
+pandas
+scipy
+scikit-learn
