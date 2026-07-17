@@ -28,6 +28,9 @@ if "_tkinter" not in sys.modules:
     _fake_tk.TclError = type("TclError", (Exception,), {})
     _fake_tk.TK_VERSION = "8.6"
     _fake_tk.TCL_VERSION = "8.6"
+    _fake_tk.READABLE = 1
+    _fake_tk.WRITABLE = 2
+    _fake_tk.EXCEPTION = 4
     sys.modules["_tkinter"] = _fake_tk
 
 from geomeppy import IDF
