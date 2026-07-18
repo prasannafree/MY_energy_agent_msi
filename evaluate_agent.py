@@ -19,7 +19,7 @@ TEST_CASES = [
     {
         "id": "T02",
         "category": "Basic",
-        "prompt": "Use alter_occupancy_global_tool to change the occupancy of 1ZoneUncontrolled.idf to a multiplier of 1.5. Output to /workspace/epMCP/test_output",
+        "prompt": "Use alter_occupancy_global_tool to change the occupancy of 1ZoneUncontrolled.idf to a multiplier of 1.5. Output to /workspace/outputs",
         "expected_tool": "alter_occupancy_global_tool"
     },
     {

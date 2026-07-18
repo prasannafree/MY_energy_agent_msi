@@ -1,16 +1,16 @@
  ReadVarsESO
- processing:/workspace/1ZoneEvapCooler_6dd3eb.rvi
+ processing:/workspace/energyplus-mcp-server/sample_files/5ZoneAirCooled_0fea20.rvi
  input file:/workspace/outputs/eplusout.eso
  output file:/workspace/outputs/eplusout.csv
  getting all vars from:/workspace/outputs/eplusout.eso
   number variables requested for output=           1
- ReadVars Run Time=00hr 00min  0.01sec
+ ReadVars Run Time=00hr 00min  0.02sec
  ReadVarsESO program completed successfully.
  ReadVarsESO
- processing:/workspace/1ZoneEvapCooler_6dd3eb.mvi
+ processing:/workspace/energyplus-mcp-server/sample_files/5ZoneAirCooled_0fea20.mvi
  input file:/workspace/outputs/eplusout.mtr
  output file:/workspace/outputs/eplusmtr.csv
  getting all vars from:/workspace/outputs/eplusout.mtr
-  number variables requested for output=           4
+  number variables requested for output=          20
  ReadVars Run Time=00hr 00min  0.01sec
  ReadVarsESO program completed successfully.

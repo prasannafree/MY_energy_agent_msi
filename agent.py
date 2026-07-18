@@ -56,7 +56,6 @@ EPMCP_SERVER_ARGS = [
     "--user", "root",
     "-v", f"{WORKSPACE_DIR / 'EnergyPlus-MCP'}:/workspace",
     "-v", f"{WORKSPACE_DIR / 'epMCP'}:/workspace/epMCP",
-    "-v", f"{WORKSPACE_DIR / 'EnergyPlus-MCP' / 'energyplus-mcp-server' / 'sample_files'}:/workspace/sample_files",
     "-v", "epmcp-deps:/root/.cache/uv",
     "-w", "/workspace/epMCP",
     "energyplus-mcp-dev",
@@ -86,7 +85,9 @@ CRITICAL RULES:
 2. If the user asks you to operate on a file but doesn't provide the exact path/name (e.g. "this one" or "a sample file"), DO NOT ask them for the path. Instead, immediately use your tools (like listing available sample files or checking the directory) to find the available files, and then either proceed or ask the user which specific one from the list they meant.
 3. Be helpful, precise, and concise.
 4. For occupancy modification, calibration, and surrogate model tasks, use the epMCP tools (alter_occupancy_global_tool, run_ep_simulation_tool, calibrate_occupancy_tool, etc.).
-5. Both toolsets share the same /workspace/ directory for files. Always output new files to /workspace/ unless directed otherwise."""
+5. Both toolsets share the same /workspace/ directory for files. Always output new files to /workspace/ unless directed otherwise.
+6. DO NOT use the copy_file tool before running simulations. Pass the original absolute paths (e.g., /workspace/energyplus-mcp-server/sample_files/model.idf or /app/software/EnergyPlusV26-1-0/WeatherData/weather.epw) directly to the tools."""
+
 
 # ---------------------------------------------------------------------------
 # Global state

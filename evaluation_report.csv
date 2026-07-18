@@ -1,5 +1,0 @@
-Test ID,Category,Prompt,Time (s),Status,Agent Reply Snippet
-T01,Basic,List all available sample IDF models.,35.75,Failed (HTTP 429),
-T02,Basic,Use alter_occupancy_global_tool to change the occupancy of 1ZoneUncontrolled.idf to a multiplier of 1.5. Output to /workspace/epMCP/test_output,34.23,Failed (HTTP 429),
-T03,Simulation,Run a simulation using run_ep_simulation_tool with 1ZoneUncontrolled.idf and Denver weather file.,34.47,Failed (HTTP 429),
-T04,Advanced,We don't have a trained surrogate model yet. Try to predict with the surrogate model and tell me what the error message says.,34.71,Failed (HTTP 429),

@@ -44,7 +44,7 @@ class PathConfig:
     workspace_root: str = "/workspace/energyplus-mcp-server"
     sample_files_path: str = ""
     temp_dir: str = "/tmp"
-    output_dir: str = "/workspace/energyplus-mcp-server/outputs"
+    output_dir: str = "/workspace/outputs"
     
     def __post_init__(self):
         """Set default paths after initialization"""
