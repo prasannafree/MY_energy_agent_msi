@@ -1,0 +1,35 @@
+Program Version,EnergyPlus, Version 26.1.0-6f2e40d102, YMD=2026.07.18 10:45
+1,5,Environment Title[],Latitude[deg],Longitude[deg],Time Zone[],Elevation[m]
+2,8,Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],Hour[],StartMinute[],EndMinute[],DayType
+3,5,Cumulative Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],DayType  ! When Daily Meters Requested
+4,2,Cumulative Days of Simulation[],Month[]  ! When Monthly Meters Requested
+5,1,Cumulative Days of Simulation[] ! When Run Period Meters Requested
+6,1,Calendar Year of Simulation[] ! When Annual Meters Requested
+170,9,Electricity:Facility [J] !Monthly [Value,Min,Day,Hour,Minute,Max,Day,Hour,Minute]
+182,9,Electricity:HVAC [J] !Monthly [Value,Min,Day,Hour,Minute,Max,Day,Hour,Minute]
+172,11,Electricity:Facility [J] !RunPeriod [Value,Min,Month,Day,Hour,Minute,Max,Month,Day,Hour,Minute]
+184,11,Electricity:HVAC [J] !RunPeriod [Value,Min,Month,Day,Hour,Minute,Max,Month,Day,Hour,Minute]
+End of Data Dictionary
+1,DENVER CENTENNIAL ANN HTG 99.6% CONDNS DB,  39.83,-104.65,  -7.00,1650.00
+4,1,12
+170,600476171.9723983,4169973.411412103,21, 1,10,4169973.418301529,21,24,60
+182,600476171.9723983,4169973.411412103,21, 1,10,4169973.418301529,21,24,60
+5,1
+172,600476171.9723983,4169973.411412103,12,21, 1,10,4169973.418301529,12,21,24,60
+184,600476171.9723983,4169973.411412103,12,21, 1,10,4169973.418301529,12,21,24,60
+1,DENVER CENTENNIAL ANN CLG 1% CONDNS DB=>MWB,  39.83,-104.65,  -7.00,1650.00
+4,1, 7
+170,7379479.591836736,0.0,21, 1,20,-99999999999999.0,21,24,60
+182,7379479.591836736,0.0,21, 1,20,-99999999999999.0,21,24,60
+5,1
+172,7379479.591836736,0.0, 7,21, 1,20,-99999999999999.0,12,21,24,60
+184,7379479.591836736,0.0, 7,21, 1,20,-99999999999999.0,12,21,24,60
+1,RUN PERIOD 1,  39.83,-104.65,  -7.00,1650.00
+4,31, 3
+170,4666102948.014833,99999999999999.0,21, 1,20,-99999999999999.0,21,24,60
+182,4666102948.014833,99999999999999.0,21, 1,20,-99999999999999.0,21,24,60
+5,31
+172,4666102948.014833,99999999999999.0, 7,21, 1,20,-99999999999999.0,12,21,24,60
+184,4666102948.014833,99999999999999.0, 7,21, 1,20,-99999999999999.0,12,21,24,60
+End of Data
+ Number of Records Written=          12

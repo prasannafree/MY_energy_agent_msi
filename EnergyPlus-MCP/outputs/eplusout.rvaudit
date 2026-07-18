@@ -1,0 +1,16 @@
+ ReadVarsESO
+ processing:/workspace/1ZoneEvapCooler_6dd3eb.rvi
+ input file:/workspace/outputs/eplusout.eso
+ output file:/workspace/outputs/eplusout.csv
+ getting all vars from:/workspace/outputs/eplusout.eso
+  number variables requested for output=           1
+ ReadVars Run Time=00hr 00min  0.01sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:/workspace/1ZoneEvapCooler_6dd3eb.mvi
+ input file:/workspace/outputs/eplusout.mtr
+ output file:/workspace/outputs/eplusmtr.csv
+ getting all vars from:/workspace/outputs/eplusout.mtr
+  number variables requested for output=           4
+ ReadVars Run Time=00hr 00min  0.01sec
+ ReadVarsESO program completed successfully.
