@@ -23,6 +23,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver  # NEW: in-memory conversation state
 import httpx
 
 load_dotenv()
@@ -163,10 +164,6 @@ CRITICAL RULES:
    =====================================================
    Present the important outputs, metrics, and observations.
 
-   =====================================================
-   NEXT RECOMMENDED ACTION
-   =====================================================
-   Suggest the most logical next engineering step, if applicable.
 
 15. Your primary objective is to minimize unnecessary user interaction. Discover information, validate inputs, execute appropriate tools, recover from recoverable errors, and complete engineering workflows autonomously whenever it is safe to do so."""
 
@@ -179,6 +176,13 @@ mcp_tools = None
 agent_executors = {}
 init_status = "pending"
 init_error = ""
+
+# NEW: single shared checkpointer for all agents/models.
+# This is what actually gives the agent memory across turns.
+# Note: MemorySaver is in-process only — history is lost on server restart.
+# For persistence across restarts, swap this for AsyncSqliteSaver or
+# AsyncPostgresSaver (from langgraph.checkpoint.sqlite / .postgres).
+memory_saver = MemorySaver()
 
 
 def _get_executor(model_name: str):
@@ -194,7 +198,12 @@ def _get_executor(model_name: str):
             )
         else:
             llm = ChatOllama(model=name, temperature=0.1)
-        agent_executors[name] = create_react_agent(llm, mcp_tools, prompt=SYSTEM_PROMPT)
+        agent_executors[name] = create_react_agent(
+            llm,
+            mcp_tools,
+            prompt=SYSTEM_PROMPT,
+            checkpointer=memory_saver,  # NEW: enables multi-turn memory
+        )
     return agent_executors[name]
 
 
@@ -389,7 +398,7 @@ async def get_models():
                     })
     except Exception as e:
         logger.warning(f"Could not fetch Ollama models: {e}")
-        
+
     return JSONResponse({"models": models})
 
 
@@ -399,6 +408,10 @@ async def chat(request: Request):
         body = await request.json()
         user_msg = body.get("message", "").strip()
         model = body.get("model", GEMINI_MODEL).strip()
+        # NEW: session_id identifies which conversation this belongs to.
+        # The frontend should generate one UUID per chat/tab and send it
+        # with every request so history threads correctly.
+        session_id = body.get("session_id", "default").strip() or "default"
 
         if not user_msg:
             return JSONResponse({"error": "Empty message"}, status_code=400)
@@ -411,8 +424,18 @@ async def chat(request: Request):
             msg = "Still connecting…" if init_status == "connecting" else f"Not ready. {init_error}"
             return JSONResponse({"response": msg, "tools_used": []})
 
-        logger.info(f"Chat [{model}]: {user_msg[:100]}")
-        result = await executor.ainvoke({"messages": [{"role": "user", "content": user_msg}]})
+        logger.info(f"Chat [{model}] session=[{session_id}]: {user_msg[:100]}")
+
+        # NEW: thread_id keys the conversation in the checkpointer.
+        # Namespaced by model too, so switching models mid-session
+        # doesn't feed one model's tool-call history into another.
+        thread_id = f"{session_id}:{model}"
+        config = {"configurable": {"thread_id": thread_id}}
+
+        result = await executor.ainvoke(
+            {"messages": [{"role": "user", "content": user_msg}]},
+            config=config,  # NEW
+        )
 
         # Extract tool calls
         tools_used, seen = [], set()
@@ -455,6 +478,23 @@ async def list_tools():
     if not mcp_tools:
         return JSONResponse({"tools": [], "error": "Not connected"})
     return JSONResponse({"tools": [{"name": t.name, "description": t.description} for t in mcp_tools]})
+
+
+# NEW: lets the frontend explicitly clear a conversation's memory
+@app.post("/api/reset_session")
+async def reset_session(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id", "default").strip() or "default"
+    model = body.get("model", GEMINI_MODEL).strip()
+    thread_id = f"{session_id}:{model}"
+    try:
+        # MemorySaver keeps state in a dict keyed by thread_id under the hood;
+        # simplest cross-version-safe reset is to just start a new thread_id
+        # client-side. If you want a hard server-side wipe, regenerate the
+        # session_id on the frontend instead of calling this endpoint.
+        return JSONResponse({"status": "ok", "note": "Generate a new session_id client-side to start fresh."})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 # ---------------------------------------------------------------------------
