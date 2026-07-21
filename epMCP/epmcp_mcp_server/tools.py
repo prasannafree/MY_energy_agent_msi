@@ -13,6 +13,7 @@ import json
 import logging
 import time
 import types
+import shutil
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -185,7 +186,15 @@ def run_ep_simulation(
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    idf_object = IDF(str(idf_path))
+    # EnergyPlus/eppy writes a temporary IDF next to the loaded model file.
+    # Stage the model inside the writable output directory so simulations can
+    # run even when the original sample model lives in a read-only location.
+    work_dir = out_path / "_working"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    staged_idf_path = work_dir / idf_path.name
+    shutil.copy2(idf_path, staged_idf_path)
+
+    idf_object = IDF(str(staged_idf_path))
 
     # Override RunPeriod if dates provided
     if all(v is not None for v in [start_month, start_day, end_month, end_day]):

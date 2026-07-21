@@ -432,10 +432,23 @@ async def chat(request: Request):
         thread_id = f"{session_id}:{model}"
         config = {"configurable": {"thread_id": thread_id}}
 
-        result = await executor.ainvoke(
-            {"messages": [{"role": "user", "content": user_msg}]},
-            config=config,  # NEW
-        )
+        payload = {"messages": [{"role": "user", "content": user_msg}]}
+
+        try:
+            result = await executor.ainvoke(payload, config=config)  # NEW
+        except Exception as first_error:
+            error_text = str(first_error)
+            if "XML syntax error" in error_text and not model.startswith("gemini"):
+                logger.warning(
+                    "Retrying chat after XML syntax error with fresh thread_id "
+                    f"(model={model}, session={session_id})"
+                )
+                retry_config = {
+                    "configurable": {"thread_id": f"{session_id}:{model}:fresh"}
+                }
+                result = await executor.ainvoke(payload, config=retry_config)
+            else:
+                raise
 
         # Extract tool calls
         tools_used, seen = [], set()
