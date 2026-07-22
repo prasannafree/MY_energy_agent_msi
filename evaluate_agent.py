@@ -19,20 +19,20 @@ TEST_CASES = [
     {
         "id": "T02",
         "category": "Basic",
-        "prompt": "Use alter_occupancy_global_tool to change the occupancy of 1ZoneUncontrolled.idf to a multiplier of 1.5. Output to /workspace/outputs",
-        "expected_tool": "alter_occupancy_global_tool"
+        "prompt": "Modify people/occupancy of 1ZoneUncontrolled.idf using modify_people.",
+        "expected_tool": "modify_people"
     },
     {
         "id": "T03",
         "category": "Simulation",
-        "prompt": "Run a simulation using run_ep_simulation_tool with 1ZoneUncontrolled.idf and Denver weather file.",
-        "expected_tool": "run_ep_simulation_tool"
+        "prompt": "Run a simulation using run_energyplus_simulation with 1ZoneUncontrolled.idf and Denver weather file.",
+        "expected_tool": "run_energyplus_simulation"
     },
     {
         "id": "T04",
         "category": "Advanced",
-        "prompt": "We don't have a trained surrogate model yet. Try to predict with the surrogate model and tell me what the error message says.",
-        "expected_tool": "predict_with_surrogate_tool"
+        "prompt": "Calculate RMSE between measured target data and simulation output using calculate_rmse_tool.",
+        "expected_tool": "calculate_rmse_tool"
     }
 ]
 
