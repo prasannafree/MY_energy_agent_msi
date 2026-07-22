@@ -52,6 +52,7 @@ def _ensure_idd():
 
     idd_candidates = [
         os.environ.get("EPLUS_IDD_PATH", ""),
+        "/workspace/all_files/Energy+.idd",
         "/app/software/EnergyPlusV26-1-0/Energy+.idd",
         "/workspace/epMCP/sample_models/Energy+.idd",
     ]

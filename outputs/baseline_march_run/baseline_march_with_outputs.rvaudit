@@ -1,0 +1,16 @@
+ ReadVarsESO
+ processing:/workspace/outputs/baseline_march_with_outputs_b0ab1d.rvi
+ input file:/workspace/outputs/baseline_march_run/baseline_march_with_outputs.eso
+ output file:/workspace/outputs/baseline_march_run/baseline_march_with_outputs.csv
+ getting all vars from:/workspace/outputs/baseline_march_run/baseline_march_with_outputs.eso
+  number variables requested for output=           1
+ ReadVars Run Time=00hr 00min  0.04sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:/workspace/outputs/baseline_march_with_outputs_b0ab1d.mvi
+ input file:/workspace/outputs/baseline_march_run/baseline_march_with_outputs.mtr
+ output file:/workspace/outputs/baseline_march_run/baseline_march_with_outputsMeter.csv
+ getting all vars from:/workspace/outputs/baseline_march_run/baseline_march_with_outputs.mtr
+  number variables requested for output=           3
+ ReadVars Run Time=00hr 00min  0.05sec
+ ReadVarsESO program completed successfully.

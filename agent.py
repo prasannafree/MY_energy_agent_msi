@@ -38,12 +38,49 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
 WORKSPACE_DIR = Path(__file__).parent.resolve()
 
+ALL_FILES_DIR = WORKSPACE_DIR / "all_files"
+ALL_FILES_DIR.mkdir(exist_ok=True)
+
+OUTPUTS_DIR = WORKSPACE_DIR / "outputs"
+OUTPUTS_DIR.mkdir(exist_ok=True)
+
+# Initial population of all_files if empty
+if not list(ALL_FILES_DIR.glob("*.idf")):
+    import shutil
+    sources = [
+        WORKSPACE_DIR / "EnergyPlus-MCP" / "energyplus-mcp-server" / "sample_files",
+        WORKSPACE_DIR / "epMCP" / "sample_models",
+        WORKSPACE_DIR / "EnergyPlus-MCP" / "energyplus-mcp-server" / "illustrative examples",
+        WORKSPACE_DIR / "EnergyPlus-MCP",
+    ]
+    for src in sources:
+        if src.exists():
+            for ext in ("*.idf", "*.epw", "*.idd", "*.csv"):
+                for f in src.glob(ext):
+                    dest = ALL_FILES_DIR / f.name
+                    if not dest.exists():
+                        try:
+                            shutil.copy2(f, dest)
+                        except Exception:
+                            pass
+
+# Remove legacy organize_all_files.py if present
+if (WORKSPACE_DIR / "organize_all_files.py").exists():
+    try:
+        (WORKSPACE_DIR / "organize_all_files.py").unlink()
+    except Exception:
+        pass
+
 # Docker command to launch the EnergyPlus MCP server
 MCP_SERVER_COMMAND = "docker"
 MCP_SERVER_ARGS = [
     "run", "--rm", "-i",
     "--user", "root",
     "-v", f"{WORKSPACE_DIR / 'EnergyPlus-MCP'}:/workspace",
+    "-v", f"{ALL_FILES_DIR}:/workspace/all_files",
+    "-v", f"{OUTPUTS_DIR}:/workspace/outputs",
+    "-e", "SAMPLE_FILES_PATH=/workspace/all_files",
+    "-e", "OUTPUT_DIR=/workspace/outputs",
     "-v", "energyplus-mcp-deps:/root/.cache/uv",
     "-w", "/workspace/energyplus-mcp-server",
     "energyplus-mcp-dev",
@@ -57,6 +94,10 @@ EPMCP_SERVER_ARGS = [
     "--user", "root",
     "-v", f"{WORKSPACE_DIR / 'EnergyPlus-MCP'}:/workspace",
     "-v", f"{WORKSPACE_DIR / 'epMCP'}:/workspace/epMCP",
+    "-v", f"{ALL_FILES_DIR}:/workspace/all_files",
+    "-v", f"{OUTPUTS_DIR}:/workspace/outputs",
+    "-e", "SAMPLE_FILES_PATH=/workspace/all_files",
+    "-e", "OUTPUT_DIR=/workspace/outputs",
     "-v", "epmcp-deps:/root/.cache/uv",
     "-w", "/workspace/epMCP",
     "energyplus-mcp-dev",
@@ -87,36 +128,11 @@ CRITICAL RULES:
 
 4. For error calculation and automated occupancy calibration tasks, use the appropriate epMCP tools (calculate_rmse_tool, calibrate_occupancy_tool).
 
-5. Both toolsets share the same /workspace/ directory. Unless explicitly instructed otherwise, save all generated files to /workspace/.
+5. All sample EnergyPlus IDF building models, EPW weather files, IDD schema files, and target CSV data are organized and available in `/workspace/all_files/` (e.g. `/workspace/all_files/1ZoneUncontrolled.idf`, `/workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw`, `/workspace/all_files/Energy+.idd`). Both MCP servers share access to this folder.
 
-6. DO NOT use the copy_file tool before running simulations. Pass the original absolute file paths directly to the tools whenever supported (for example, /workspace/energyplus-mcp-server/sample_files/model.idf or /app/software/EnergyPlusV26-1-0/WeatherData/weather.epw).
+6. Pass absolute file paths directly to tools whenever supported (for example, `/workspace/all_files/1ZoneUncontrolled.idf` or `/workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw`). DO NOT use `copy_file` before running simulations. Save all generated outputs to `/workspace/outputs`.
 
-7. Before invoking any tool, ALWAYS present the following sections to the user in this exact order:
-
-   =====================================================
-   TOOL SEQUENCE
-   =====================================================
-   List every tool that you intend to use in execution order.
-
-   =====================================================
-   EXECUTION PLAN
-   =====================================================
-   Explain the complete workflow step-by-step.
-
-   =====================================================
-   RATIONALE
-   =====================================================
-   Briefly explain why this workflow was selected. This should be a concise operational justification only. Do NOT reveal internal reasoning or chain-of-thought.
-
-   After displaying these three sections, begin tool execution.
-
-8. Treat the Tool Sequence as the initial execution plan, not a fixed contract. If tool outputs require changing the workflow, immediately display:
-
-   Plan Update
-   - Reason for the change
-   - Updated Tool Sequence
-
-   Then continue execution automatically.
+7. Answer user queries directly, accurately, and concisely. When asked for specific information (such as listing available IDF or weather files), execute the appropriate tool and directly summarize the results without reciting available tool lists.
 
 9. Never fabricate information. Never invent:
    - file names

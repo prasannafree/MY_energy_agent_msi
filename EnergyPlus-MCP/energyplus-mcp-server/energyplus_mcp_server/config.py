@@ -48,8 +48,15 @@ class PathConfig:
     
     def __post_init__(self):
         """Set default paths after initialization"""
+        env_out = os.getenv("OUTPUT_DIR")
+        if env_out:
+            self.output_dir = env_out
         if not self.sample_files_path:
-            self.sample_files_path = os.path.join(self.workspace_root, "sample_files")
+            env_path = os.getenv("SAMPLE_FILES_PATH", "/workspace/all_files")
+            if os.path.exists(env_path):
+                self.sample_files_path = env_path
+            else:
+                self.sample_files_path = os.path.join(self.workspace_root, "sample_files")
 
 
 @dataclass
