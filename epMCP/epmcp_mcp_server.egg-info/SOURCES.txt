@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 epmcp_mcp_server/__init__.py
+epmcp_mcp_server/ifc_visualizer.py
 epmcp_mcp_server/server.py
 epmcp_mcp_server/tools.py
 epmcp_mcp_server.egg-info/PKG-INFO

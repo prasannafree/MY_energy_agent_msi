@@ -18,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 from epmcp_mcp_server.tools import (
     calculate_rmse,
     calibrate_occupancy,
+    inspect_and_visualize_ifc,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -146,6 +147,42 @@ async def calibrate_occupancy_tool(
     except Exception as e:
         logger.error(f"Error during calibration: {e}", exc_info=True)
         return f"Error during calibration: {str(e)}"
+
+
+# ---------------------------------------------------------------------------
+# Tool 3: inspect_and_visualize_ifc
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def inspect_and_visualize_ifc_tool(
+    ifc_path: str,
+    output_dir: str = "/workspace/outputs",
+    output_html_name: str = "ifc_3d_visualization.html",
+) -> str:
+    """
+    Inspect an IFC building model, extract storeys, spaces, and element metadata,
+    and generate an interactive 3D HTML visualization file.
+
+    Args:
+        ifc_path: Path to the input .ifc file (e.g. /workspace/all_files/model.ifc)
+        output_dir: Directory to save the 3D HTML visualization (default: /workspace/outputs)
+        output_html_name: Name of output HTML visualization file (default: ifc_3d_visualization.html)
+
+    Returns:
+        JSON string with IFC metadata summary, storeys, spaces, element counts,
+        and generated 3D HTML visualization path.
+
+    Examples:
+        inspect_and_visualize_ifc_tool("/workspace/all_files/20160414office_model_CV2_fordesign.ifc")
+    """
+    try:
+        logger.info(f"Inspecting and visualizing IFC model: {ifc_path}")
+        result = inspect_and_visualize_ifc(ifc_path, output_dir, output_html_name)
+        return json.dumps(result, indent=2)
+    except FileNotFoundError as e:
+        return f"File not found: {str(e)}"
+    except Exception as e:
+        logger.error(f"Error inspecting IFC model: {e}", exc_info=True)
+        return f"Error inspecting IFC model: {str(e)}"
 
 
 # ---------------------------------------------------------------------------

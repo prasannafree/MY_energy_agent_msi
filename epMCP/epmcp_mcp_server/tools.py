@@ -622,3 +622,88 @@ def predict_with_surrogate(
         "scipy_converged": result.success,
         "message": f"Calibration complete in {elapsed:.3f}s",
     }
+
+
+# ---------------------------------------------------------------------------
+# Tool 6: inspect_and_visualize_ifc
+# ---------------------------------------------------------------------------
+
+def inspect_and_visualize_ifc(
+    ifc_path: str,
+    output_dir: str = "/workspace/outputs",
+    output_html_name: str = "ifc_3d_visualization.html",
+) -> dict:
+    """
+    Inspect an IFC building model, extract storeys, spaces, and element metadata,
+    and generate an interactive 3D HTML visualization file.
+
+    Args:
+        ifc_path: Path to the input .ifc file (e.g. /workspace/all_files/model.ifc)
+        output_dir: Directory to save the 3D HTML visualization (default: /workspace/outputs)
+        output_html_name: Name of output HTML visualization file (default: ifc_3d_visualization.html)
+
+    Returns:
+        dict with IFC metadata summary, storey breakdown, space list, element counts,
+        and generated HTML visualization path.
+    """
+    ifc_file = Path(ifc_path)
+    if not ifc_file.exists():
+        raise FileNotFoundError(f"IFC file not found: {ifc_path}")
+
+    try:
+        from epmcp_mcp_server.ifc_visualizer import parse_ifc, build_3d_traces
+    except ImportError:
+        try:
+            from visualization_and_converter import parse_ifc, build_3d_traces
+        except ImportError as e:
+            raise ImportError(f"Required IFC visualization modules not found: {e}")
+
+    file_bytes = ifc_file.read_bytes()
+    parsed = parse_ifc(file_bytes)
+
+    # Generate 3D visualization if Plotly is installed
+    html_saved_path = None
+    try:
+        import plotly.graph_objects as go
+        traces, spaces, elements = build_3d_traces(parsed["ifc"])
+        clean_traces = []
+        for t in traces:
+            t_copy = copy.deepcopy(t)
+            t_copy.pop("global_id", None)
+            clean_traces.append(t_copy)
+
+        fig = go.Figure(data=clean_traces)
+        fig.update_layout(
+            scene=dict(
+                aspectmode="data",
+                xaxis=dict(title="X (m)"),
+                yaxis=dict(title="Y (m)"),
+                zaxis=dict(title="Z (m)"),
+            ),
+            margin=dict(l=0, r=0, b=0, t=40),
+            title=f"3D IFC Model: {parsed.get('project', ifc_file.name)}",
+        )
+
+        out_path = Path(output_dir)
+        out_path.mkdir(parents=True, exist_ok=True)
+        html_target = out_path / output_html_name
+        fig.write_html(str(html_target))
+        html_saved_path = str(html_target)
+    except Exception as e:
+        logger.warning(f"Could not generate Plotly HTML visualization: {e}")
+
+    element_counts = dict(parsed.get("element_counts", {}))
+
+    return {
+        "status": "success",
+        "file_name": ifc_file.name,
+        "project_name": parsed.get("project", "Unnamed"),
+        "schema": parsed.get("schema", "IFC"),
+        "total_storeys": len(parsed.get("storeys", [])),
+        "storeys": [s.get("name") for s in parsed.get("storeys", [])],
+        "total_spaces": len(parsed.get("spaces", [])),
+        "space_names": [sp.get("name") for sp in parsed.get("spaces", [])],
+        "element_counts": element_counts,
+        "visualization_html": html_saved_path,
+        "message": f"Successfully parsed IFC file '{ifc_file.name}' with {len(parsed.get('spaces', []))} spaces.",
+    }

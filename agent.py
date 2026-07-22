@@ -71,6 +71,16 @@ if (WORKSPACE_DIR / "organize_all_files.py").exists():
     except Exception:
         pass
 
+# Copy visualization_and_converter.py to ifc_visualizer.py inside epMCP package
+_vis_src = WORKSPACE_DIR / "visualization_and_converter.py"
+_vis_dst = WORKSPACE_DIR / "epMCP" / "epmcp_mcp_server" / "ifc_visualizer.py"
+if _vis_src.exists():
+    import shutil
+    try:
+        shutil.copy2(_vis_src, _vis_dst)
+    except Exception:
+        pass
+
 # Docker command to launch the EnergyPlus MCP server
 MCP_SERVER_COMMAND = "docker"
 MCP_SERVER_ARGS = [
@@ -117,12 +127,13 @@ Your capabilities include:
 - Modifying building envelopes
 - Calculating RMSE between simulation and measured data (calculate_rmse_tool)
 - Automated calibration of occupancy against measured data using Nelder-Mead optimization (calibrate_occupancy_tool)
+- Inspecting IFC building models, extracting storeys/spaces/elements metadata, and generating interactive 3D HTML visualizations (inspect_and_visualize_ifc_tool)
 
 CRITICAL RULES:
 
-1. ALWAYS use your tools proactively.
+1. Use tools appropriately to fulfill the user's request. For informational or listing queries (e.g. asking what files exist), use discovery tools to find the answer, but DO NOT run heavy processing tools, simulations, or visualizers unless specifically requested by the user.
 
-2. If the user asks you to operate on a file but doesn't provide the exact path/name (e.g. "this one" or "a sample file"), DO NOT ask them for the path. Instead, immediately use your tools (such as listing available sample files or inspecting the workspace) to discover candidate files. If there is only one obvious match, proceed automatically. If multiple valid matches exist, present the discovered options and ask the user to choose.
+2. If the user asks you to operate on a file but doesn't provide the exact path/name (e.g. "this one" or "a sample file"), DO NOT ask them for the path. Instead, use your tools to discover candidate files. If there is only one obvious match, proceed automatically. If multiple valid matches exist, present the discovered options and ask the user to choose.
 
 3. Be helpful, precise, and concise.
 
@@ -132,7 +143,7 @@ CRITICAL RULES:
 
 6. Pass absolute file paths directly to tools whenever supported (for example, `/workspace/all_files/1ZoneUncontrolled.idf` or `/workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw`). DO NOT use `copy_file` before running simulations. Save all generated outputs to `/workspace/outputs`.
 
-7. Answer user queries directly, accurately, and concisely. When asked for specific information (such as listing available IDF or weather files), execute the appropriate tool and directly summarize the results without reciting available tool lists.
+7. Answer user queries directly, accurately, and concisely. When asked to list files (such as IDF, EPW, or IFC files), list the discovered files cleanly and stop—do not automatically invoke visualization, simulation, or conversion tools.
 
 9. Never fabricate information. Never invent:
    - file names
@@ -414,15 +425,68 @@ async def get_models():
     return JSONResponse({"models": models})
 
 
+def _clean_response(user_msg: str, response: str) -> str:
+    if not response:
+        return response
+
+    umsg = user_msg.lower()
+
+    # Clean raw array wrappers like [{'type': 'text', 'text': '...'}]
+    if response.startswith("[{'type': 'text'") or response.startswith('[{"type": "text"'):
+        try:
+            arr = eval(response) if response.startswith("[{") else json.loads(response)
+            if isinstance(arr, list) and len(arr) > 0 and isinstance(arr[0], dict):
+                text_val = arr[0].get("text", "")
+                if text_val:
+                    return _clean_response(user_msg, text_val)
+        except Exception:
+            pass
+
+    # Detect unformatted raw JSON dumps containing sample_files or file lists
+    if "sample_files" in response or "IDF files" in response:
+        try:
+            start_idx = response.find("{")
+            end_idx = response.rfind("}") + 1
+            if start_idx >= 0 and end_idx > start_idx:
+                json_str = response[start_idx:end_idx]
+                data = json.loads(json_str)
+                sf = data.get("sample_files", data)
+                if isinstance(sf, dict):
+                    if "ifc" in umsg:
+                        ifc_files = [f["name"] for f in sf.get("Other files", []) if f.get("name", "").lower().endswith(".ifc")]
+                        if ifc_files:
+                            return "Available IFC files in `/workspace/all_files`:\n\n" + "\n".join(f"- 🏗️ `{f}`" for f in ifc_files)
+                        else:
+                            return "No IFC files found in `/workspace/all_files`."
+                    elif "idf" in umsg:
+                        idf_files = [f["name"] for f in sf.get("IDF files", [])]
+                        return "Available IDF files in `/workspace/all_files`:\n\n" + "\n".join(f"- 📄 `{f}`" for f in idf_files)
+                    elif "weather" in umsg or "epw" in umsg:
+                        epw_files = [f["name"] for f in sf.get("Weather files", [])]
+                        return "Available Weather files in `/workspace/all_files`:\n\n" + "\n".join(f"- 🌤️ `{f}`" for f in epw_files)
+                    else:
+                        items = []
+                        for f in sf.get("IDF files", []):
+                            items.append(f"- 📄 `{f['name']}` (IDF model)")
+                        for f in sf.get("Weather files", []):
+                            items.append(f"- 🌤️ `{f['name']}` (EPW weather)")
+                        for f in sf.get("Other files", []):
+                            fn = f.get("name", "")
+                            if fn.lower().endswith(".ifc"):
+                                items.append(f"- 🏗️ `{fn}` (IFC model)")
+                        return "Available files in `/workspace/all_files`:\n\n" + "\n".join(items)
+        except Exception:
+            pass
+
+    return response
+
+
 @app.post("/api/chat")
 async def chat(request: Request):
     try:
         body = await request.json()
         user_msg = body.get("message", "").strip()
         model = body.get("model", GEMINI_MODEL).strip()
-        # NEW: session_id identifies which conversation this belongs to.
-        # The frontend should generate one UUID per chat/tab and send it
-        # with every request so history threads correctly.
         session_id = body.get("session_id", "default").strip() or "default"
 
         if not user_msg:
@@ -438,16 +502,13 @@ async def chat(request: Request):
 
         logger.info(f"Chat [{model}] session=[{session_id}]: {user_msg[:100]}")
 
-        # NEW: thread_id keys the conversation in the checkpointer.
-        # Namespaced by model too, so switching models mid-session
-        # doesn't feed one model's tool-call history into another.
         thread_id = f"{session_id}:{model}"
         config = {"configurable": {"thread_id": thread_id}}
 
         payload = {"messages": [{"role": "user", "content": user_msg}]}
 
         try:
-            result = await executor.ainvoke(payload, config=config)  # NEW
+            result = await executor.ainvoke(payload, config=config)
         except Exception as first_error:
             error_text = str(first_error)
             if "XML syntax error" in error_text and not model.startswith("gemini"):
@@ -487,8 +548,45 @@ async def chat(request: Request):
                     response = c
                 if response:
                     break
+
+        if not response:
+            # Extract content from recent ToolMessage if AI didn't format it
+            for msg in reversed(result.get("messages", [])):
+                if hasattr(msg, "type") and msg.type == "tool" and msg.content:
+                    raw_content = msg.content
+                    try:
+                        parsed_json = json.loads(raw_content) if isinstance(raw_content, str) else raw_content
+                        if isinstance(parsed_json, dict):
+                            items = []
+                            if "sample_files" in parsed_json:
+                                sf = parsed_json.get("sample_files", {})
+                                for f in sf.get("IDF files", []):
+                                    items.append(f"📄 `{f['name']}` (IDF model)")
+                                for f in sf.get("Weather files", []):
+                                    items.append(f"🌤️ `{f['name']}` (EPW weather)")
+                                for f in sf.get("Other files", []):
+                                    fname = f.get("name", "")
+                                    if fname.lower().endswith(".ifc"):
+                                        items.append(f"🏗️ `{fname}` (IFC 3D model)")
+                                    elif not fname.endswith(".md"):
+                                        items.append(f"📁 `{fname}`")
+                            if "ifc_files" in parsed_json:
+                                items.extend([f"🏗️ `{f}` (IFC 3D model)" for f in parsed_json["ifc_files"]])
+                            if items:
+                                response = "Available files in `/workspace/all_files`:\n\n" + "\n".join(items)
+                            else:
+                                response = f"Tool result:\n```json\n{json.dumps(parsed_json, indent=2)}\n```"
+                        else:
+                            response = str(raw_content)
+                    except Exception:
+                        response = str(raw_content)
+                    if response:
+                        break
+
         if not response:
             response = "Request processed (no text response generated)."
+
+        response = _clean_response(user_msg, response)
 
         return JSONResponse({"response": response, "tools_used": tools_used})
 
