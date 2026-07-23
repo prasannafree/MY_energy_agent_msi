@@ -7,6 +7,7 @@
   <title>EnergyPlus MCP Agent</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <!-- Background Effects -->
@@ -20,10 +21,13 @@
         <div class="header-icon">⚡</div>
         <div>
           <div class="header-title">EnergyPlus MCP Agent</div>
-          <div class="header-subtitle">Powered by Google Gemini</div>
+          <div class="header-subtitle">Powered by Google Gemini & EnergyPlus MCP</div>
         </div>
       </div>
       <div class="header-right">
+        <button class="home-btn" id="home-btn" onclick="showWelcomeScreen()" title="Reset to Home Dashboard">
+          🏠 Home
+        </button>
         <div class="model-select-wrapper">
           <select class="model-select" id="model-select" onchange="changeModel()">
             <option value="gemini-3.5-flash">Loading models...</option>
@@ -42,34 +46,185 @@
     <!-- Alert Banner Container -->
     <div id="alert-banner-container"></div>
 
-    <!-- Chat Area -->
+    <!-- Main Container -->
     <div class="chat-area" id="chat-area">
-      <!-- Welcome Screen -->
+      <!-- Welcome Screen / Opening Page -->
       <div class="welcome-screen" id="welcome-screen">
-        <div class="welcome-icon">🏢</div>
-        <h1 class="welcome-title">EnergyPlus MCP Agent</h1>
-        <p class="welcome-desc">
-          Your AI assistant for building energy simulation. Ask me anything about 
-          EnergyPlus models — I can load, inspect, modify, and simulate IDF files 
-          using specialized tools.
-        </p>
-        <div class="suggestion-grid">
-          <div class="suggestion-card" onclick="useSuggestion('What tools do you have available?')">
-            <div class="suggestion-emoji">🔧</div>
-            <div class="suggestion-text">What tools do you have available?</div>
+        <div class="welcome-header">
+          <div class="welcome-icon">🏢</div>
+          <h1 class="welcome-title">EnergyPlus MCP Assistant</h1>
+          <p class="welcome-desc">
+            Analyze, calibrate, and simulate building performance using specialized EnergyPlus and IFC tools.
+          </p>
+        </div>
+
+        <!-- 4 Key Action Prompt Cards -->
+        <div class="action-cards-grid">
+          <div class="action-card" onclick="useSuggestion('list all the available tools with description')">
+            <div class="action-card-header">
+              <span class="action-icon">🔧</span>
+              <span class="action-badge">MCP Tools</span>
+            </div>
+            <div class="action-card-title">Available Tools</div>
+            <div class="action-card-desc">List all available EnergyPlus & epMCP tools with descriptions</div>
+            <div class="action-card-prompt">Prompt LLM ➔</div>
           </div>
-          <div class="suggestion-card" onclick="useSuggestion('List the sample IDF files available')">
-            <div class="suggestion-emoji">📁</div>
-            <div class="suggestion-text">List the sample IDF files available</div>
+
+          <div class="action-card" onclick="useSuggestion('list all the idf files and weather files')">
+            <div class="action-card-header">
+              <span class="action-icon">📁</span>
+              <span class="action-badge">IDF & EPW</span>
+            </div>
+            <div class="action-card-title">IDF & Weather Files</div>
+            <div class="action-card-desc">List all building models (.idf) and weather files (.epw)</div>
+            <div class="action-card-prompt">Prompt LLM ➔</div>
           </div>
-          <div class="suggestion-card" onclick="useSuggestion('Load and summarize a sample EnergyPlus model')">
-            <div class="suggestion-emoji">📊</div>
-            <div class="suggestion-text">Load and summarize a sample model</div>
+
+          <div class="action-card" onclick="useSuggestion('list the available ifc files and use that to visualiza the buidling')">
+            <div class="action-card-header">
+              <span class="action-icon">🏗️</span>
+              <span class="action-badge">3D Building</span>
+            </div>
+            <div class="action-card-title">IFC 3D Visualization</div>
+            <div class="action-card-desc">Discover IFC models and generate interactive 3D visualizer</div>
+            <div class="action-card-prompt">Prompt LLM ➔</div>
           </div>
-          <div class="suggestion-card" onclick="useSuggestion('How can I improve energy efficiency of a building model?')">
-            <div class="suggestion-emoji">💡</div>
-            <div class="suggestion-text">How to improve energy efficiency?</div>
+
+          <div class="action-card" onclick="useSuggestion('i am in new delhi , next month march 50 percent more people are going to come to building , i need to compare the new electricity usage with basecase , give me the comparision fo that .')">
+            <div class="action-card-header">
+              <span class="action-icon">📊</span>
+              <span class="action-badge">Simulation</span>
+            </div>
+            <div class="action-card-title">New Delhi Occupancy Impact</div>
+            <div class="action-card-desc">Compare March electricity usage with +50% occupancy increase</div>
+            <div class="action-card-prompt">Prompt LLM ➔</div>
           </div>
+        </div>
+
+        <!-- Interactive Dashboard Tabs -->
+        <div class="dashboard-container">
+          <div class="dashboard-tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-delhi')">📊 New Delhi March Analysis</button>
+            <button class="tab-btn" onclick="switchTab('tab-ifc')">🏗️ 3D IFC Visualizer</button>
+            <button class="tab-btn" onclick="switchTab('tab-files')">📁 Workspace Files</button>
+            <button class="tab-btn" onclick="switchTab('tab-tools')">🔧 Tools Inventory</button>
+          </div>
+
+          <!-- Tab 1: New Delhi March Comparison -->
+          <div class="tab-content active" id="tab-delhi">
+            <div class="delhi-dashboard">
+              <div class="dashboard-header">
+                <div>
+                  <h3 class="dash-title">📍 New Delhi Building Energy Study — March Occupancy Increase</h3>
+                  <p class="dash-subtitle">Simulating electricity demand increase under a +50% people occupancy surge (ASHRAE 901 Large Office)</p>
+                </div>
+                <button class="ask-llm-btn" onclick="useSuggestion('i am in new delhi , next month march 50 percent more people are going to come to building , i need to compare the new electricity usage with basecase , give me the comparision fo that .')">
+                  🤖 Ask Agent for Breakdown
+                </button>
+              </div>
+
+              <!-- Metric Cards -->
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <div class="metric-label">Base Case Usage (March)</div>
+                  <div class="metric-value" id="val-base-kwh">761,157 <span class="metric-unit">kWh</span></div>
+                  <div class="metric-sub">Peak Demand: <strong id="val-base-peak">1,606 kW</strong></div>
+                </div>
+
+                <div class="metric-card highlight">
+                  <div class="metric-label">+50% Occupancy Case</div>
+                  <div class="metric-value" id="val-new-kwh">768,323 <span class="metric-unit">kWh</span></div>
+                  <div class="metric-sub">Peak Demand: <strong id="val-new-peak">1,639 kW</strong></div>
+                </div>
+
+                <div class="metric-card delta">
+                  <div class="metric-label">Electricity Increase (March)</div>
+                  <div class="metric-value text-amber" id="val-diff-kwh">+7,166 <span class="metric-unit">kWh</span></div>
+                  <div class="metric-sub"><span class="badge-tag" id="val-diff-pct">+0.94%</span> increase over basecase</div>
+                </div>
+
+                <div class="metric-card delta">
+                  <div class="metric-label">Peak Demand Delta</div>
+                  <div class="metric-value text-red" id="val-peak-diff">+32.5 <span class="metric-unit">kW</span></div>
+                  <div class="metric-sub"><span class="badge-tag red" id="val-peak-pct">+2.02%</span> peak load increase</div>
+                </div>
+              </div>
+
+              <!-- Chart Container -->
+              <div class="chart-wrapper">
+                <div class="chart-header">
+                  <span>Daily Electricity Consumption Profile (March 1 - March 31)</span>
+                  <span class="chart-legend">
+                    <span class="legend-dot base"></span> Base Case
+                    <span class="legend-dot mod"></span> +50% Occupancy
+                  </span>
+                </div>
+                <div class="chart-box">
+                  <canvas id="delhiChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: 3D IFC Visualizer -->
+          <div class="tab-content" id="tab-ifc">
+            <div class="ifc-visualizer-section">
+              <div class="ifc-controls">
+                <div class="ifc-select-group">
+                  <label for="ifc-file-select">Select IFC Building Model:</label>
+                  <select id="ifc-file-select" class="ifc-select">
+                    <option value="20160414office_model_CV2_fordesign.ifc">20160414office_model_CV2_fordesign.ifc</option>
+                  </select>
+                </div>
+                <button class="vis-btn" id="vis-btn" onclick="generateAndLoadIFC()">
+                  ✨ Generate 3D Interactive Visualization
+                </button>
+              </div>
+
+              <div class="iframe-container" id="ifc-frame-container">
+                <div class="iframe-placeholder" id="ifc-placeholder">
+                  <div class="placeholder-icon">🏗️</div>
+                  <h4>Interactive 3D IFC Visualizer</h4>
+                  <p>Click "Generate 3D Interactive Visualization" above to view storeys, spaces, and elements in 3D.</p>
+                </div>
+                <iframe id="ifc-iframe" style="display: none;" title="IFC 3D Model"></iframe>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Workspace Files -->
+          <div class="tab-content" id="tab-files">
+            <div class="files-grid">
+              <div class="file-category-card">
+                <div class="cat-header">📄 EnergyPlus Building Models (.idf)</div>
+                <div class="file-list" id="list-idf-files">
+                  <div class="loading-files">Loading IDF files...</div>
+                </div>
+              </div>
+
+              <div class="file-category-card">
+                <div class="cat-header">🌤️ Weather Data Files (.epw)</div>
+                <div class="file-list" id="list-epw-files">
+                  <div class="loading-files">Loading EPW weather files...</div>
+                </div>
+              </div>
+
+              <div class="file-category-card">
+                <div class="cat-header">🏗️ 3D IFC Models (.ifc)</div>
+                <div class="file-list" id="list-ifc-files">
+                  <div class="loading-files">Loading IFC files...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 4: Tools Inventory -->
+          <div class="tab-content" id="tab-tools">
+            <div class="tools-inventory-grid" id="tools-inventory-list">
+              <div class="loading-files">Loading registered tools...</div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -79,7 +234,7 @@
       <div class="input-wrapper" id="input-wrapper">
         <textarea
           id="message-input"
-          placeholder="Ask about EnergyPlus models..."
+          placeholder="Ask about EnergyPlus models, simulation runs, or occupant calibration..."
           rows="1"
           onkeydown="handleKeyDown(event)"
           oninput="autoResize(this)"

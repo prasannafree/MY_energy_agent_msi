@@ -425,6 +425,67 @@ async def get_models():
     return JSONResponse({"models": models})
 
 
+@app.get("/api/files")
+async def get_files():
+    idf_files = sorted([f.name for f in ALL_FILES_DIR.glob("*.idf")])
+    epw_files = sorted([f.name for f in ALL_FILES_DIR.glob("*.epw")])
+    ifc_files = sorted([f.name for f in ALL_FILES_DIR.glob("*.ifc")])
+    return JSONResponse({
+        "idf": idf_files,
+        "epw": epw_files,
+        "ifc": ifc_files
+    })
+
+
+@app.post("/api/visualize_ifc")
+async def visualize_ifc(request: Request):
+    body = await request.json()
+    filename = body.get("filename", "20160414office_model_CV2_fordesign.ifc").strip()
+    ifc_path = f"/workspace/all_files/{filename}"
+    
+    # Try using connected MCP tools first
+    if mcp_tools:
+        for tool in mcp_tools:
+            if tool.name == "inspect_and_visualize_ifc_tool":
+                try:
+                    res = await tool.ainvoke({
+                        "ifc_path": ifc_path,
+                        "output_dir": "/workspace/outputs",
+                        "output_html_name": "ifc_3d_visualization.html"
+                    })
+                    gen_file = OUTPUTS_DIR / "ifc_3d_visualization.html"
+                    if gen_file.exists():
+                        import shutil
+                        shutil.copy2(gen_file, static_dir / "ifc_3d_visualization.html")
+                    return JSONResponse({"status": "success", "html_url": "/static/ifc_3d_visualization.html", "result": res})
+                except Exception as e:
+                    logger.error(f"Error invoking inspect_and_visualize_ifc_tool: {e}")
+                    
+    # Fallback to direct docker run
+    cmd = [
+        "docker", "run", "--rm", "-i", "--user", "root",
+        "-v", f"{WORKSPACE_DIR / 'EnergyPlus-MCP'}:/workspace",
+        "-v", f"{WORKSPACE_DIR / 'epMCP'}:/workspace/epMCP",
+        "-v", f"{ALL_FILES_DIR}:/workspace/all_files",
+        "-v", f"{OUTPUTS_DIR}:/workspace/outputs",
+        "-w", "/workspace/epMCP",
+        "energyplus-mcp-dev",
+        "uv", "run", "python", "-c",
+        f"from epmcp_mcp_server.tools import inspect_and_visualize_ifc; inspect_and_visualize_ifc('{ifc_path}', '/workspace/outputs', 'ifc_3d_visualization.html')"
+    ]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        gen_file = OUTPUTS_DIR / "ifc_3d_visualization.html"
+        if gen_file.exists():
+            import shutil
+            shutil.copy2(gen_file, static_dir / "ifc_3d_visualization.html")
+            return JSONResponse({"status": "success", "html_url": "/static/ifc_3d_visualization.html"})
+        return JSONResponse({"error": f"Failed to generate visualization: {r.stderr}"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+
 def _clean_response(user_msg: str, response: str) -> str:
     if not response:
         return response

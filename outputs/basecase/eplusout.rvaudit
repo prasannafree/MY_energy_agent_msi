@@ -1,0 +1,16 @@
+ ReadVarsESO
+ processing:/workspace/outputs/basecase/_working/ASHRAE901_OfficeLarge_STD2019_NewDelhi_922285.rvi
+ input file:/workspace/outputs/basecase/eplusout.eso
+ output file:/workspace/outputs/basecase/eplusout.csv
+ getting all vars from:/workspace/outputs/basecase/eplusout.eso
+  number variables requested for output=           1
+ ReadVars Run Time=00hr 00min  0.01sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:/workspace/outputs/basecase/_working/ASHRAE901_OfficeLarge_STD2019_NewDelhi_922285.mvi
+ input file:/workspace/outputs/basecase/eplusout.mtr
+ output file:/workspace/outputs/basecase/eplusmtr.csv
+ getting all vars from:/workspace/outputs/basecase/eplusout.mtr
+  number variables requested for output=           2
+ ReadVars Run Time=00hr 00min  0.01sec
+ ReadVarsESO program completed successfully.
