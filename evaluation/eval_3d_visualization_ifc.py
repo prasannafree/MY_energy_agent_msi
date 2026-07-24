@@ -115,7 +115,7 @@ async def run_evaluation():
     
     # Ensure reports directory exists relative to this script or workspace
     workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    reports_dir = os.path.join(workspace_dir, "reports")
+    reports_dir = os.path.join(workspace_dir, "evaluation_reports")
     os.makedirs(reports_dir, exist_ok=True)
     
     report_filename = f"{USE_CASE_NAME}_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
