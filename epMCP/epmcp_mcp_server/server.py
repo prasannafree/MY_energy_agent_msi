@@ -172,7 +172,7 @@ async def inspect_and_visualize_ifc_tool(
         and generated 3D HTML visualization path.
 
     Examples:
-        inspect_and_visualize_ifc_tool("/workspace/all_files/20160414office_model_CV2_fordesign.ifc")
+        inspect_and_visualize_ifc_tool("/workspace/all_files/model.ifc")
     """
     try:
         logger.info(f"Inspecting and visualizing IFC model: {ifc_path}")
