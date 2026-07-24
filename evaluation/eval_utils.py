@@ -137,6 +137,7 @@ async def run_single_eval(
     payload = {
         "message": query,
         "thread_id": thread_id,
+        "session_id": thread_id,  # agent.py expects session_id
     }
     response = await client.post(f"{agent_url}/api/chat", json=payload)
     if response.status_code == 200:
@@ -282,10 +283,15 @@ def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mod
     tool_call_details = trace.get("tool_call_details", [])
     agent_reply = data.get("response", "")
 
-    actual_tools = [t.get("name") for t in tools_used_data]
+    # agent.py deduplicates tools_used_data. To get the TRUE sequence with duplicates,
+    # we pull the names from tool_call_details in the trace.
+    if tool_call_details:
+        actual_tools = [tc.get("tool_name") for tc in tool_call_details]
+    else:
+        actual_tools = [t.get("name") for t in tools_used_data]
 
-    # Core success: did the agent use the expected tools?
-    success = set(actual_tools) == set(expected_tools)
+    # Core success: evaluate the complete start-to-end tool sequence exactly
+    success = (actual_tools == expected_tools)
 
     # Compute all metrics
     tool_accuracy = compute_tool_selection_accuracy(expected_tools, actual_tools)
