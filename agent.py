@@ -584,7 +584,7 @@ async def chat(request: Request):
             else:
                 raise
 
-        # Extract tool calls
+        # Extract tool calls (deduplicated — for backward compat with frontend)
         tools_used, seen = [], set()
         for msg in result.get("messages", []):
             if hasattr(msg, "tool_calls") and msg.tool_calls:
@@ -593,6 +593,76 @@ async def chat(request: Request):
                     if name not in seen:
                         seen.add(name)
                         tools_used.append({"name": name, "args": tc.get("args", {})})
+
+        # -------------------------------------------------------------------
+        # Build detailed execution trace for evaluation
+        # -------------------------------------------------------------------
+        tool_call_details = []   # every tool call, in order, with status
+        total_llm_calls = 0
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+        has_token_info = False
+        step_counter = 0
+
+        # Map tool_call_id → ToolMessage content so we can pair them
+        tool_results = {}
+        for msg in result.get("messages", []):
+            if hasattr(msg, "type") and msg.type == "tool":
+                tid = getattr(msg, "tool_call_id", None)
+                if tid:
+                    tool_results[tid] = msg.content or ""
+
+        for msg in result.get("messages", []):
+            # Count LLM reasoning steps
+            if hasattr(msg, "type") and msg.type == "ai":
+                total_llm_calls += 1
+                # Try to extract token usage (works for Gemini, may be None for Ollama)
+                usage = getattr(msg, "usage_metadata", None)
+                if usage and isinstance(usage, dict):
+                    has_token_info = True
+                    total_prompt_tokens += usage.get("input_tokens", 0) or usage.get("prompt_tokens", 0)
+                    total_completion_tokens += usage.get("output_tokens", 0) or usage.get("completion_tokens", 0)
+
+            # Record every tool call
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                for tc in msg.tool_calls:
+                    step_counter += 1
+                    tc_id = tc.get("id", "")
+                    tc_name = tc.get("name", "?")
+                    tc_args = tc.get("args", {})
+
+                    # Check the paired ToolMessage for errors
+                    result_content = tool_results.get(tc_id, "")
+                    # Coerce to string (content can be a list of blocks)
+                    if isinstance(result_content, list):
+                        result_content = " ".join(
+                            str(b.get("text", "")) if isinstance(b, dict) else str(b)
+                            for b in result_content
+                        )
+                    else:
+                        result_content = str(result_content) if result_content else ""
+                    error_keywords = ("Error", "File not found", "error:", "Exception", "not found")
+                    is_error = any(result_content.startswith(kw) or kw.lower() in result_content.lower()[:200]
+                                   for kw in error_keywords) if result_content else False
+
+                    tool_call_details.append({
+                        "step": step_counter,
+                        "tool_name": tc_name,
+                        "args": tc_args,
+                        "status": "error" if is_error else "success",
+                        "error_message": result_content[:200] if is_error else None,
+                    })
+
+        trace = {
+            "total_llm_calls": total_llm_calls,
+            "total_tool_calls": len(tool_call_details),
+            "tool_call_details": tool_call_details,
+            "token_usage": {
+                "prompt_tokens": total_prompt_tokens if has_token_info else None,
+                "completion_tokens": total_completion_tokens if has_token_info else None,
+                "total_tokens": (total_prompt_tokens + total_completion_tokens) if has_token_info else None,
+            },
+        }
 
         # Extract final AI response
         response = ""
@@ -649,7 +719,7 @@ async def chat(request: Request):
 
         response = _clean_response(user_msg, response)
 
-        return JSONResponse({"response": response, "tools_used": tools_used})
+        return JSONResponse({"response": response, "tools_used": tools_used, "trace": trace})
 
     except Exception as e:
         logger.error(f"Chat error: {e}", exc_info=True)
