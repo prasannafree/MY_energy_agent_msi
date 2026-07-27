@@ -293,6 +293,9 @@ def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mod
     # Core success: evaluate the complete start-to-end tool sequence exactly
     success = (actual_tools == expected_tools)
 
+    # Task success: evaluates if all expected tools were used at least once
+    task_success = set(expected_tools).issubset(set(actual_tools))
+
     # Compute all metrics
     tool_accuracy = compute_tool_selection_accuracy(expected_tools, actual_tools)
     arg_precision = compute_argument_precision(tool_call_details, arg_rules)
@@ -307,6 +310,7 @@ def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mod
         "Mode": mode,
         "Time Taken (s)": round(elapsed_time, 2),
         "Success": success,
+        "Task Success": task_success,
         "Expected Tools": ", ".join(expected_tools),
         "Actual Tools": ", ".join(actual_tools),
         "Tool Selection Accuracy": round(tool_accuracy, 4),
@@ -328,6 +332,7 @@ def _build_error_row(run_id, elapsed_time, data, expected_tools, mode):
         "Mode": mode,
         "Time Taken (s)": round(elapsed_time, 2),
         "Success": False,
+        "Task Success": False,
         "Expected Tools": ", ".join(expected_tools),
         "Actual Tools": data.get("error", "HTTP Error"),
         "Tool Selection Accuracy": 0.0,
@@ -349,6 +354,7 @@ def _build_exception_row(run_id, elapsed_time, exception, expected_tools, mode):
         "Mode": mode,
         "Time Taken (s)": round(elapsed_time, 2),
         "Success": False,
+        "Task Success": False,
         "Expected Tools": ", ".join(expected_tools),
         "Actual Tools": f"Exception: {type(exception).__name__}",
         "Tool Selection Accuracy": 0.0,
@@ -384,7 +390,7 @@ def generate_report(
     ]
 
     display_cols = [
-        "Run ID", "Success", "Time Taken (s)",
+        "Run ID", "Success", "Task Success", "Time Taken (s)",
         "Tool Selection Accuracy", "Argument Precision", "Tool Error Rate",
         "Redundant Call Ratio", "Step Efficiency", "Looping Rate", "LLM Steps",
         "Expected Tools", "Actual Tools",
@@ -396,6 +402,7 @@ def generate_report(
             continue
 
         success_rate = (df["Success"].sum() / total) * 100
+        task_success_rate = (df["Task Success"].sum() / total) * 100
         avg_time = df["Time Taken (s)"].mean()
 
         print(f"\n{'=' * 60}")
@@ -403,7 +410,8 @@ def generate_report(
         print(f"{'=' * 60}")
         print(f"  Use Case:               {use_case_name}")
         print(f"  Total Runs:             {total}")
-        print(f"  Task Completion Rate:   {success_rate:.2f}%")
+        print(f"  Strict Sequence Match:  {success_rate:.2f}%")
+        print(f"  Task Success Rate:      {task_success_rate:.2f}%")
         print(f"  Avg Time Taken:         {avg_time:.2f}s")
 
         for col in metric_cols:
