@@ -865,6 +865,32 @@ def get_epi_benchmark(building_type: str, climate_zone: str) -> dict:
     b_type = building_type.strip().lower().replace(" ", "_").replace("-", "_")
     c_zone = climate_zone.strip().lower().replace(" ", "_").replace("-", "_")
 
+    # Alias mappings for flexible natural language inputs
+    building_aliases = {
+        "hotels": "hotel",
+        "offices": "office",
+        "commercial_office": "office",
+        "hospitals": "hospital",
+        "schools": "school",
+        "retails": "retail",
+        "apartment": "apartment_highrise",
+        "apartments": "apartment_highrise",
+        "residential": "apartment_highrise",
+    }
+    climate_aliases = {
+        "summer": "hot_dry",
+        "hot": "hot_dry",
+        "summer_hot": "hot_dry",
+        "hot_and_dry": "hot_dry",
+        "monsoon": "warm_humid",
+        "humid": "warm_humid",
+        "winter": "cold",
+        "mild": "temperate",
+    }
+
+    b_type = building_aliases.get(b_type, b_type)
+    c_zone = climate_aliases.get(c_zone, c_zone)
+
     type_data = _EPI_BENCHMARK_TABLE.get(b_type)
     used_default = False
 
@@ -877,20 +903,24 @@ def get_epi_benchmark(building_type: str, climate_zone: str) -> dict:
             benchmark = _EPI_DEFAULT
             used_default = True
 
-    return {
+    res = {
         "status": "success",
         "benchmark_epi_kwh_m2_yr": float(benchmark),
         "building_type": b_type,
         "climate_zone": c_zone,
         "used_default": used_default,
-        "available_building_types": list(_EPI_BENCHMARK_TABLE.keys()),
-        "available_climate_zones": ["cold", "composite", "hot_dry", "warm_humid", "temperate"],
         "message": (
             f"Benchmark EPI for {b_type} in {c_zone} climate: "
             f"{benchmark:.1f} kWh/m²/year"
             + (" (default — unrecognized type or zone)" if used_default else "")
         ),
     }
+
+    if used_default:
+        res["available_building_types"] = list(_EPI_BENCHMARK_TABLE.keys())
+        res["available_climate_zones"] = ["cold", "composite", "hot_dry", "warm_humid", "temperate"]
+
+    return res
 
 
 # ---------------------------------------------------------------------------

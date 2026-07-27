@@ -149,7 +149,7 @@ CRITICAL RULES:
 
 6. Pass absolute file paths directly to tools whenever supported (for example, `/workspace/all_files/1ZoneUncontrolled.idf` or `/workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw`). DO NOT use `copy_file` before running simulations. Save all generated outputs to `/workspace/outputs`.
 
-7. Answer user queries directly, accurately, and concisely. When asked to list files (such as IDF, EPW, or IFC files), list the discovered files cleanly and stop—do not automatically invoke visualization, simulation, or conversion tools.
+7. Answer user queries directly, accurately, and concisely. When asked to list files or look up information (such as benchmark EPI or floor area), invoke the relevant discovery/lookup tool ONCE, present the answer clearly, and stop—do not make repeated or looping tool calls for other unrequested options, and do not automatically invoke visualization, simulation, or conversion tools unless asked.
 
 8. FORMATTING & RESPONSE STYLE:
    - NEVER output raw JSON objects, raw Python dictionaries, or unformatted raw tool responses directly to the user.
