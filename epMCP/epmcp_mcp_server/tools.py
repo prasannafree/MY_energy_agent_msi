@@ -772,6 +772,21 @@ def extract_annual_energy_kwh(output_directory: str) -> dict:
             total_gas_kwh = float(raw_sum / 3_600_000.0)
             gas_col_used = col
 
+    # Fallback: if Electricity:Facility meter was not found, check demand rate columns
+    if total_elec_kwh == 0.0:
+        for col in df.columns:
+            col_lower = col.lower()
+            if "electricity demand rate" in col_lower or "electricity demand" in col_lower or ("electricity" in col_lower and "facility" in col_lower):
+                raw_sum = df[col].sum()
+                if "[w]" in col_lower or "rate" in col_lower:
+                    # Watts (W) reported hourly -> kWh: sum(W * 1h) / 1000
+                    total_elec_kwh = float(raw_sum / 1000.0)
+                else:
+                    # Joules (J) -> kWh: sum(J) / 3,600,000
+                    total_elec_kwh = float(raw_sum / 3_600_000.0)
+                elec_col_used = col
+                break
+
     total_kwh = total_elec_kwh + total_gas_kwh
 
     return {

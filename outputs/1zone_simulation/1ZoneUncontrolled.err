@@ -1,0 +1,39 @@
+Program Version,EnergyPlus, Version 26.1.0-6f2e40d102, YMD=2026.07.27 10:35,
+   ** Warning ** Version: in IDF="25.1" not the same as expected="26.1"
+   ** Warning ** Version: in IDF="25.1" not the same as expected="26.1"
+   ************* Testing Individual Branch Integrity
+   ************* All Branches passed integrity testing
+   ************* Testing Individual Supply Air Path Integrity
+   ************* All Supply Air Paths passed integrity testing
+   ************* Testing Individual Return Air Path Integrity
+   ************* All Return Air Paths passed integrity testing
+   ************* No node connection errors were found.
+   ************* Beginning Simulation
+   ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   **   ~~~   **  Routine=PsyTwbFnTdbWPb, Environment=RUN PERIOD 1, at Simulation time=01/25 18:15 - 18:30
+   **   ~~~   **  Input Temperature=-434.81
+   ** Warning ** WetBulb not converged after 101 iterations(PsyTwbFnTdbWPb)
+   **   ~~~   **  Routine=Unknown, Environment=RUN PERIOD 1, at Simulation time=03/14 11:45 - 12:00
+   **   ~~~   **  Input Temperature = 6.69
+   **   ~~~   **  Input Humidity Ratio= 1.927576E-003
+   **   ~~~   **  Input Pressure = 82600.00
+   **   ~~~   **  Resultant Temperature= 5.56E-003
+   ************* Simulation Error Summary *************
+   *************
+   ************* ===== Recurring Error Summary =====
+   ************* The following recurring error messages occurred.
+   *************
+   *************  ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   *************  **   ~~~   **   This error occurred 7 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=-125.072796 C  Min=-31221.387695 C
+   *************
+   *************  ** Warning ** WetBulb not converged after max iterations(PsyTwbFnTdbWPb)
+   *************  **   ~~~   **   This error occurred 1 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Completed Successfully-- 10 Warning; 0 Severe Errors; Elapsed Time=00hr 00min  0.44sec

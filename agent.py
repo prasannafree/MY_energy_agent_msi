@@ -154,7 +154,7 @@ CRITICAL RULES:
 8. FORMATTING & RESPONSE STYLE:
    - NEVER output raw JSON objects, raw Python dictionaries, or unformatted raw tool responses directly to the user.
    - ALWAYS format file lists, model inspection summaries, simulation parameters, and tool outputs into clear, professional, human-readable Markdown.
-   - Use bullet points (`-`), bold titles, code snippets (`` `filename` ``), and category icons (e.g. 📄 for IDF models, 🌤️ for Weather files, 🏗️ for IFC 3D models).
+   - Use bullet points (`-`), bold titles, code snippets (`` `filename` ``) . 
 
 9. Never fabricate information. Never invent:
    - file names

@@ -1,0 +1,16 @@
+ ReadVarsESO
+ processing:/workspace/all_files/5ZoneAirCooled_b2da5f.rvi
+ input file:/workspace/outputs/epi_demo_run/5ZoneAirCooled.eso
+ output file:/workspace/outputs/epi_demo_run/5ZoneAirCooled.csv
+ getting all vars from:/workspace/outputs/epi_demo_run/5ZoneAirCooled.eso
+  number variables requested for output=          73
+ ReadVars Run Time=00hr 00min  0.36sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:/workspace/all_files/5ZoneAirCooled_b2da5f.mvi
+ input file:/workspace/outputs/epi_demo_run/5ZoneAirCooled.mtr
+ output file:/workspace/outputs/epi_demo_run/5ZoneAirCooledMeter.csv
+ getting all vars from:/workspace/outputs/epi_demo_run/5ZoneAirCooled.mtr
+  number variables requested for output=          20
+ ReadVars Run Time=00hr 00min  0.01sec
+ ReadVarsESO program completed successfully.
