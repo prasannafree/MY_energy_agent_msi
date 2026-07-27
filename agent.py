@@ -6,6 +6,8 @@ Serves a chat UI on http://localhost:5000
 import os
 import sys
 import copy
+import json
+import re
 import asyncio
 import logging
 import socket
@@ -128,6 +130,10 @@ Your capabilities include:
 - Calculating RMSE between simulation and measured data (calculate_rmse_tool)
 - Automated calibration of occupancy against measured data using Nelder-Mead optimization (calibrate_occupancy_tool)
 - Inspecting IFC building models, extracting storeys/spaces/elements metadata, and generating interactive 3D HTML visualizations (inspect_and_visualize_ifc_tool)
+- Calculating gross conditioned floor area from IDF geometry (calculate_gross_floor_area_tool)
+- Extracting annual energy consumption (kWh) from simulation output CSV (extract_annual_energy_tool)
+- Looking up EPI (Energy Performance Index) benchmarks by building type and climate zone (get_epi_benchmark_tool)
+- Computing EPI, EPI ratio, and code compliance evaluation combining floor area, simulation output, and benchmarks (calculate_epi_tool)
 
 CRITICAL RULES:
 
@@ -144,6 +150,11 @@ CRITICAL RULES:
 6. Pass absolute file paths directly to tools whenever supported (for example, `/workspace/all_files/1ZoneUncontrolled.idf` or `/workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw`). DO NOT use `copy_file` before running simulations. Save all generated outputs to `/workspace/outputs`.
 
 7. Answer user queries directly, accurately, and concisely. When asked to list files (such as IDF, EPW, or IFC files), list the discovered files cleanly and stop—do not automatically invoke visualization, simulation, or conversion tools.
+
+8. FORMATTING & RESPONSE STYLE:
+   - NEVER output raw JSON objects, raw Python dictionaries, or unformatted raw tool responses directly to the user.
+   - ALWAYS format file lists, model inspection summaries, simulation parameters, and tool outputs into clear, professional, human-readable Markdown.
+   - Use bullet points (`-`), bold titles, code snippets (`` `filename` ``), and category icons (e.g. 📄 for IDF models, 🌤️ for Weather files, 🏗️ for IFC 3D models).
 
 9. Never fabricate information. Never invent:
    - file names
@@ -486,6 +497,73 @@ async def visualize_ifc(request: Request):
 
 
 
+def _format_file_lists_from_arrays(idf_files: list, epw_files: list, ifc_files: list, umsg: str, other_files: list = None) -> str:
+    if other_files is None:
+        other_files = []
+
+    wants_idf = "idf" in umsg
+    wants_weather = "weather" in umsg or "epw" in umsg
+    wants_ifc = "ifc" in umsg
+
+    show_all = not (wants_idf or wants_weather or wants_ifc)
+
+    sections = []
+    if (wants_idf or show_all) and idf_files:
+        items = "\n".join(f"- 📄 `{f}`" for f in idf_files)
+        sections.append(f"### IDF Building Models ({len(idf_files)})\n{items}")
+
+    if (wants_weather or show_all) and epw_files:
+        items = "\n".join(f"- 🌤️ `{f}`" for f in epw_files)
+        sections.append(f"### Weather Files ({len(epw_files)})\n{items}")
+
+    if (wants_ifc or show_all) and ifc_files:
+        items = "\n".join(f"- 🏗️ `{f}`" for f in ifc_files)
+        sections.append(f"### IFC 3D Models ({len(ifc_files)})\n{items}")
+
+    if show_all and other_files:
+        items = "\n".join(f"- 📁 `{f}`" for f in other_files)
+        sections.append(f"### Other Files ({len(other_files)})\n{items}")
+
+    if not sections:
+        return "No matching files found in `/workspace/all_files`."
+
+    return "Available files in `/workspace/all_files`:\n\n" + "\n\n".join(sections)
+
+
+def _format_file_sections(sf: dict, umsg: str) -> str:
+    idf_files = []
+    epw_files = []
+    ifc_files = []
+    other_files = []
+
+    def get_names(key):
+        items = sf.get(key, [])
+        res = []
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, dict) and "name" in item:
+                    res.append(item["name"])
+                elif isinstance(item, str):
+                    res.append(item)
+        return res
+
+    for f in get_names("IDF files"):
+        idf_files.append(f)
+    for f in get_names("Weather files"):
+        epw_files.append(f)
+    for f in get_names("Other files"):
+        if f.lower().endswith(".ifc"):
+            ifc_files.append(f)
+        elif f.lower().endswith(".idf"):
+            idf_files.append(f)
+        elif f.lower().endswith(".epw"):
+            epw_files.append(f)
+        else:
+            other_files.append(f)
+
+    return _format_file_lists_from_arrays(idf_files, epw_files, ifc_files, umsg, other_files)
+
+
 def _clean_response(user_msg: str, response: str) -> str:
     if not response:
         return response
@@ -503,39 +581,55 @@ def _clean_response(user_msg: str, response: str) -> str:
         except Exception:
             pass
 
-    # Detect unformatted raw JSON dumps containing sample_files or file lists
-    if "sample_files" in response or "IDF files" in response:
+    # Detect unformatted raw JSON dumps containing file-list structures.
+    # Only trigger on strong indicators of a raw file-list tool dump, NOT on
+    # normal prose that happens to mention ".idf" filenames.
+    has_file_list_markers = (
+        "sample_files" in response
+        or '"IDF files"' in response
+        or '"Weather files"' in response
+        or '"Other files"' in response
+    )
+
+    if has_file_list_markers:
+        data = None
         try:
             start_idx = response.find("{")
             end_idx = response.rfind("}") + 1
             if start_idx >= 0 and end_idx > start_idx:
                 json_str = response[start_idx:end_idx]
                 data = json.loads(json_str)
-                sf = data.get("sample_files", data)
-                if isinstance(sf, dict):
-                    if "ifc" in umsg:
-                        ifc_files = [f["name"] for f in sf.get("Other files", []) if f.get("name", "").lower().endswith(".ifc")]
-                        if ifc_files:
-                            return "Available IFC files in `/workspace/all_files`:\n\n" + "\n".join(f"- 🏗️ `{f}`" for f in ifc_files)
-                        else:
-                            return "No IFC files found in `/workspace/all_files`."
-                    elif "idf" in umsg:
-                        idf_files = [f["name"] for f in sf.get("IDF files", [])]
-                        return "Available IDF files in `/workspace/all_files`:\n\n" + "\n".join(f"- 📄 `{f}`" for f in idf_files)
-                    elif "weather" in umsg or "epw" in umsg:
-                        epw_files = [f["name"] for f in sf.get("Weather files", [])]
-                        return "Available Weather files in `/workspace/all_files`:\n\n" + "\n".join(f"- 🌤️ `{f}`" for f in epw_files)
-                    else:
-                        items = []
-                        for f in sf.get("IDF files", []):
-                            items.append(f"- 📄 `{f['name']}` (IDF model)")
-                        for f in sf.get("Weather files", []):
-                            items.append(f"- 🌤️ `{f['name']}` (EPW weather)")
-                        for f in sf.get("Other files", []):
-                            fn = f.get("name", "")
-                            if fn.lower().endswith(".ifc"):
-                                items.append(f"- 🏗️ `{fn}` (IFC model)")
-                        return "Available files in `/workspace/all_files`:\n\n" + "\n".join(items)
+        except Exception:
+            data = None
+
+        if isinstance(data, dict):
+            sf = data.get("sample_files", data)
+            if isinstance(sf, dict) and ("IDF files" in sf or "Weather files" in sf or "Other files" in sf):
+                return _format_file_sections(sf, umsg)
+
+        # Regex fallback only if the response looks like a raw dump (heavy
+        # JSON-like structure, not natural language with a few file mentions).
+        # Heuristic: the response has structural JSON markers like repeated
+        # "name": or "size_bytes" patterns that indicate a raw tool dump.
+        raw_dump_indicators = (
+            response.count('"name"') >= 3
+            or response.count('"size_bytes"') >= 2
+            or response.count('"source"') >= 2
+        )
+        if raw_dump_indicators:
+            idf_files = sorted(list(set(re.findall(r'[\w\-\.]+\.idf', response, re.IGNORECASE))))
+            epw_files = sorted(list(set(re.findall(r'[\w\-\.]+\.epw', response, re.IGNORECASE))))
+            ifc_files = sorted(list(set(re.findall(r'[\w\-\.]+\.ifc', response, re.IGNORECASE))))
+
+            if idf_files or epw_files or ifc_files:
+                return _format_file_lists_from_arrays(idf_files, epw_files, ifc_files, umsg)
+
+    # General check: If the ENTIRE response is a raw JSON string, format as code block
+    stripped = response.strip()
+    if (stripped.startswith("{") and stripped.endswith("}")) or (stripped.startswith("[") and stripped.endswith("]")):
+        try:
+            obj = json.loads(stripped)
+            return f"```json\n{json.dumps(obj, indent=2)}\n```"
         except Exception:
             pass
 

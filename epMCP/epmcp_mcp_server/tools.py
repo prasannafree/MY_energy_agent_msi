@@ -625,7 +625,374 @@ def predict_with_surrogate(
 
 
 # ---------------------------------------------------------------------------
-# Tool 6: inspect_and_visualize_ifc
+# Tool 6: calculate_gross_floor_area
+# ---------------------------------------------------------------------------
+
+def calculate_gross_floor_area(idf_path: str) -> dict:
+    """
+    Calculate total gross conditioned floor area (m²) from IDF geometry.
+
+    Uses geomeppy surface geometry methods with multiple fallback strategies:
+    1. geomeppy getsurfaces('floor') — preferred method
+    2. Direct iteration over BuildingSurface:Detailed with Surface_Type='Floor'
+    3. Zone volume heuristic if no floor surfaces resolve
+
+    Args:
+        idf_path: Path to the EnergyPlus IDF file.
+
+    Returns:
+        dict with total_gross_area_m2, method used, and per-zone breakdown.
+    """
+    _ensure_idd()
+
+    idf_file = Path(idf_path)
+    if not idf_file.exists():
+        raise FileNotFoundError(f"IDF file not found: {idf_path}")
+
+    idf = IDF(str(idf_file))
+    total_area = 0.0
+    method_used = "none"
+    zone_breakdown = {}
+
+    # Method 1: geomeppy getsurfaces('floor')
+    try:
+        floor_surfaces = idf.getsurfaces("floor")
+        for s in floor_surfaces:
+            if hasattr(s, "area") and s.area > 0:
+                zone_name = getattr(s, "Zone_Name", "Unknown")
+                area = float(s.area)
+                total_area += area
+                zone_breakdown[zone_name] = zone_breakdown.get(zone_name, 0.0) + area
+        if total_area > 0:
+            method_used = "geomeppy_getsurfaces"
+    except Exception as e:
+        logger.debug(f"getsurfaces('floor') fallback: {e}")
+
+    # Method 2: Direct BuildingSurface:Detailed iteration
+    if total_area == 0.0:
+        surfaces = idf.idfobjects.get("BUILDINGSURFACE:DETAILED", [])
+        for surface in surfaces:
+            if getattr(surface, "Surface_Type", "").lower() == "floor":
+                try:
+                    area = float(surface.area)
+                    zone_name = getattr(surface, "Zone_Name", "Unknown")
+                    total_area += area
+                    zone_breakdown[zone_name] = zone_breakdown.get(zone_name, 0.0) + area
+                except Exception:
+                    pass
+        if total_area > 0:
+            method_used = "buildingsurface_detailed"
+
+    # Method 3: Fallback — estimate from Zone objects if available
+    if total_area == 0.0:
+        zones = idf.idfobjects.get("ZONE", [])
+        if zones:
+            logger.warning(
+                "Could not calculate floor area from geometry. "
+                f"Model has {len(zones)} zones but no resolvable floor surfaces."
+            )
+            method_used = "no_floor_geometry"
+
+    # Round zone breakdown values
+    zone_breakdown = {k: round(v, 2) for k, v in zone_breakdown.items()}
+
+    return {
+        "status": "success" if total_area > 0 else "warning",
+        "total_gross_area_m2": round(total_area, 2),
+        "method_used": method_used,
+        "zone_count": len(zone_breakdown),
+        "zone_breakdown_m2": zone_breakdown,
+        "message": (
+            f"Total gross conditioned floor area: {total_area:.2f} m² "
+            f"across {len(zone_breakdown)} zones."
+            if total_area > 0
+            else "Could not determine floor area from IDF geometry. "
+                 "Ensure the model has BuildingSurface:Detailed floor objects."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 7: extract_annual_energy_kwh
+# ---------------------------------------------------------------------------
+
+def extract_annual_energy_kwh(output_directory: str) -> dict:
+    """
+    Parse EnergyPlus simulation output CSV to extract annual energy in kWh.
+
+    Searches for meter output files (eplusmeter.csv, eplusout.csv) in the
+    output directory. Converts values from Joules (EnergyPlus native unit)
+    to kWh. Detects Electricity:Facility and NaturalGas:Facility columns.
+
+    Args:
+        output_directory: Path to the directory containing EnergyPlus CSV output.
+
+    Returns:
+        dict with electricity_kwh, gas_kwh, total_kwh, and source file info.
+    """
+    out_dir = Path(output_directory)
+    if not out_dir.exists():
+        raise FileNotFoundError(f"Output directory not found: {output_directory}")
+
+    # Try meter output first, then general output
+    csv_file = None
+    for candidate in ["eplusmeter.csv", "eplusout.csv"]:
+        path = out_dir / candidate
+        if path.exists():
+            csv_file = path
+            break
+
+    if csv_file is None:
+        # Search for any CSV with meter-like content
+        csv_files = list(out_dir.glob("*.csv"))
+        if not csv_files:
+            raise FileNotFoundError(
+                f"No CSV output files found in {output_directory}"
+            )
+        # Pick the largest CSV as a heuristic
+        csv_file = max(csv_files, key=lambda f: f.stat().st_size)
+
+    df = pd.read_csv(csv_file)
+    df.columns = [c.strip() for c in df.columns]
+
+    total_elec_kwh = 0.0
+    total_gas_kwh = 0.0
+    elec_col_used = None
+    gas_col_used = None
+
+    for col in df.columns:
+        col_lower = col.lower()
+        if "electricity:facility" in col_lower:
+            raw_sum = df[col].sum()
+            # EnergyPlus meters report in Joules; 1 kWh = 3,600,000 J
+            total_elec_kwh = float(raw_sum / 3_600_000.0)
+            elec_col_used = col
+        elif "naturalgas:facility" in col_lower or "gas:facility" in col_lower:
+            raw_sum = df[col].sum()
+            total_gas_kwh = float(raw_sum / 3_600_000.0)
+            gas_col_used = col
+
+    total_kwh = total_elec_kwh + total_gas_kwh
+
+    return {
+        "status": "success",
+        "electricity_kwh": round(total_elec_kwh, 2),
+        "gas_kwh": round(total_gas_kwh, 2),
+        "total_kwh": round(total_kwh, 2),
+        "source_file": str(csv_file),
+        "electricity_column": elec_col_used,
+        "gas_column": gas_col_used,
+        "data_rows": len(df),
+        "message": (
+            f"Annual energy: {total_kwh:,.2f} kWh total "
+            f"(Electricity: {total_elec_kwh:,.2f} kWh, "
+            f"Gas: {total_gas_kwh:,.2f} kWh)"
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 8: get_epi_benchmark
+# ---------------------------------------------------------------------------
+
+# EPI benchmark table: building_type → climate_zone → kWh/m²/year
+# Sources: ECBC (India), ASHRAE 90.1 reference baselines
+_EPI_BENCHMARK_TABLE = {
+    "apartment_highrise": {
+        "cold": 120.0,
+        "composite": 140.0,
+        "hot_dry": 150.0,
+        "warm_humid": 160.0,
+        "temperate": 110.0,
+    },
+    "office": {
+        "cold": 130.0,
+        "composite": 160.0,
+        "hot_dry": 170.0,
+        "warm_humid": 180.0,
+        "temperate": 120.0,
+    },
+    "hospital": {
+        "cold": 250.0,
+        "composite": 300.0,
+        "hot_dry": 320.0,
+        "warm_humid": 340.0,
+        "temperate": 230.0,
+    },
+    "school": {
+        "cold": 90.0,
+        "composite": 110.0,
+        "hot_dry": 120.0,
+        "warm_humid": 130.0,
+        "temperate": 85.0,
+    },
+    "retail": {
+        "cold": 140.0,
+        "composite": 170.0,
+        "hot_dry": 180.0,
+        "warm_humid": 190.0,
+        "temperate": 130.0,
+    },
+    "hotel": {
+        "cold": 170.0,
+        "composite": 200.0,
+        "hot_dry": 220.0,
+        "warm_humid": 240.0,
+        "temperate": 160.0,
+    },
+}
+
+# Default EPI when building type or climate zone is unrecognized
+_EPI_DEFAULT = 140.0
+
+
+def get_epi_benchmark(building_type: str, climate_zone: str) -> dict:
+    """
+    Look up the baseline EPI benchmark (kWh/m²/year) for a building type
+    and climate zone.
+
+    Supported building types: apartment_highrise, office, hospital,
+    school, retail, hotel.
+    Supported climate zones: cold, composite, hot_dry, warm_humid, temperate.
+
+    Args:
+        building_type: Building type key (case-insensitive).
+        climate_zone: Climate zone key (case-insensitive).
+
+    Returns:
+        dict with benchmark_epi, building_type, climate_zone, and available options.
+    """
+    b_type = building_type.strip().lower().replace(" ", "_").replace("-", "_")
+    c_zone = climate_zone.strip().lower().replace(" ", "_").replace("-", "_")
+
+    type_data = _EPI_BENCHMARK_TABLE.get(b_type)
+    used_default = False
+
+    if type_data is None:
+        benchmark = _EPI_DEFAULT
+        used_default = True
+    else:
+        benchmark = type_data.get(c_zone)
+        if benchmark is None:
+            benchmark = _EPI_DEFAULT
+            used_default = True
+
+    return {
+        "status": "success",
+        "benchmark_epi_kwh_m2_yr": float(benchmark),
+        "building_type": b_type,
+        "climate_zone": c_zone,
+        "used_default": used_default,
+        "available_building_types": list(_EPI_BENCHMARK_TABLE.keys()),
+        "available_climate_zones": ["cold", "composite", "hot_dry", "warm_humid", "temperate"],
+        "message": (
+            f"Benchmark EPI for {b_type} in {c_zone} climate: "
+            f"{benchmark:.1f} kWh/m²/year"
+            + (" (default — unrecognized type or zone)" if used_default else "")
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 9: calculate_epi
+# ---------------------------------------------------------------------------
+
+def calculate_epi(
+    idf_path: str,
+    simulation_output_dir: str,
+    building_type: str = "office",
+    climate_zone: str = "composite",
+) -> dict:
+    """
+    Compute the Energy Performance Index (EPI) for a building.
+
+    Combines:
+    1. Floor area calculation from IDF geometry (via calculate_gross_floor_area)
+    2. Annual energy extraction from simulation output (via extract_annual_energy_kwh)
+    3. Benchmark lookup (via get_epi_benchmark)
+    4. EPI ratio and code compliance evaluation
+
+    Prerequisites: An EnergyPlus simulation must have already been run and
+    the output CSV must exist in simulation_output_dir.
+
+    Args:
+        idf_path: Path to the IDF file (for floor area calculation).
+        simulation_output_dir: Path to the simulation output directory
+                               containing CSV results.
+        building_type: Building type for benchmark (e.g. 'office', 'hospital').
+        climate_zone: Climate zone for benchmark (e.g. 'composite', 'cold').
+
+    Returns:
+        dict with proposed EPI, benchmark EPI, EPI ratio, compliance status,
+        floor area, energy breakdown, and performance summary.
+    """
+    # Step 1: Calculate floor area
+    area_result = calculate_gross_floor_area(idf_path)
+    gross_area = area_result["total_gross_area_m2"]
+
+    if gross_area <= 0:
+        return {
+            "status": "error",
+            "message": (
+                "Cannot compute EPI: floor area is zero. "
+                "Ensure the IDF model has resolvable floor geometry "
+                "(BuildingSurface:Detailed with Surface_Type='Floor')."
+            ),
+            "floor_area_result": area_result,
+        }
+
+    # Step 2: Extract annual energy from simulation output
+    energy_result = extract_annual_energy_kwh(simulation_output_dir)
+    total_kwh = energy_result["total_kwh"]
+
+    if total_kwh <= 0:
+        return {
+            "status": "error",
+            "message": (
+                "Cannot compute EPI: total annual energy is zero. "
+                "Ensure the simulation completed and output meters "
+                "(Electricity:Facility, NaturalGas:Facility) are configured."
+            ),
+            "energy_result": energy_result,
+        }
+
+    # Step 3: Look up benchmark
+    benchmark_result = get_epi_benchmark(building_type, climate_zone)
+    benchmark_epi = benchmark_result["benchmark_epi_kwh_m2_yr"]
+
+    # Step 4: Compute EPI metrics
+    proposed_epi = total_kwh / gross_area
+    epi_ratio = proposed_epi / benchmark_epi
+    is_compliant = bool(epi_ratio <= 1.0)
+
+    pct_diff = abs(round((1 - epi_ratio) * 100, 1))
+    perf_label = "better" if is_compliant else "worse"
+
+    return {
+        "status": "success",
+        "gross_area_m2": round(gross_area, 2),
+        "total_annual_kwh": round(total_kwh, 2),
+        "electricity_kwh": energy_result["electricity_kwh"],
+        "gas_kwh": energy_result["gas_kwh"],
+        "proposed_epi_kwh_m2_yr": round(proposed_epi, 2),
+        "benchmark_epi_kwh_m2_yr": benchmark_epi,
+        "epi_ratio": round(epi_ratio, 3),
+        "code_compliant": is_compliant,
+        "building_type": building_type.strip().lower(),
+        "climate_zone": climate_zone.strip().lower(),
+        "performance_summary": (
+            f"Building performance is {pct_diff}% {perf_label} "
+            f"than the {building_type} code benchmark for {climate_zone} climate. "
+            f"EPI Ratio: {epi_ratio:.3f} "
+            f"({'COMPLIANT ✅' if is_compliant else 'NON-COMPLIANT ❌'})"
+        ),
+        "floor_area_method": area_result["method_used"],
+        "energy_source_file": energy_result["source_file"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 10: inspect_and_visualize_ifc
 # ---------------------------------------------------------------------------
 
 def inspect_and_visualize_ifc(

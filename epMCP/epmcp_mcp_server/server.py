@@ -19,6 +19,10 @@ from epmcp_mcp_server.tools import (
     calculate_rmse,
     calibrate_occupancy,
     inspect_and_visualize_ifc,
+    calculate_gross_floor_area,
+    extract_annual_energy_kwh,
+    get_epi_benchmark,
+    calculate_epi,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -183,6 +187,158 @@ async def inspect_and_visualize_ifc_tool(
     except Exception as e:
         logger.error(f"Error inspecting IFC model: {e}", exc_info=True)
         return f"Error inspecting IFC model: {str(e)}"
+
+
+# ---------------------------------------------------------------------------
+# Tool 4: calculate_gross_floor_area
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def calculate_gross_floor_area_tool(idf_path: str) -> str:
+    """
+    Calculate total gross conditioned floor area (m²) from IDF building geometry.
+
+    Uses geomeppy surface geometry analysis with multiple fallback strategies.
+    Returns per-zone floor area breakdown.
+
+    Args:
+        idf_path: Path to the EnergyPlus IDF file
+
+    Returns:
+        JSON string with total floor area, method used, and per-zone breakdown
+
+    Examples:
+        calculate_gross_floor_area_tool("/workspace/all_files/5ZoneAirCooled.idf")
+    """
+    try:
+        logger.info(f"Calculating gross floor area: {idf_path}")
+        result = calculate_gross_floor_area(idf_path)
+        return json.dumps(result, indent=2)
+    except FileNotFoundError as e:
+        return f"File not found: {str(e)}"
+    except Exception as e:
+        logger.error(f"Error calculating floor area: {e}", exc_info=True)
+        return f"Error calculating floor area: {str(e)}"
+
+
+# ---------------------------------------------------------------------------
+# Tool 5: extract_annual_energy_kwh
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def extract_annual_energy_tool(output_directory: str) -> str:
+    """
+    Extract annual energy consumption (kWh) from EnergyPlus simulation output CSV.
+
+    Parses meter output files (eplusmeter.csv or eplusout.csv) and converts
+    values from Joules to kWh. Detects Electricity:Facility and NaturalGas:Facility.
+
+    Args:
+        output_directory: Path to the directory containing EnergyPlus CSV output files
+
+    Returns:
+        JSON string with electricity_kwh, gas_kwh, total_kwh, and source info
+
+    Examples:
+        extract_annual_energy_tool("/workspace/outputs/simulation_run_01")
+    """
+    try:
+        logger.info(f"Extracting annual energy from: {output_directory}")
+        result = extract_annual_energy_kwh(output_directory)
+        return json.dumps(result, indent=2)
+    except FileNotFoundError as e:
+        return f"File not found: {str(e)}"
+    except Exception as e:
+        logger.error(f"Error extracting energy data: {e}", exc_info=True)
+        return f"Error extracting energy data: {str(e)}"
+
+
+# ---------------------------------------------------------------------------
+# Tool 6: get_epi_benchmark
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def get_epi_benchmark_tool(
+    building_type: str,
+    climate_zone: str,
+) -> str:
+    """
+    Look up the code-compliant EPI benchmark (kWh/m²/year) for a building type
+    and climate zone.
+
+    Supported building types: apartment_highrise, office, hospital, school,
+    retail, hotel.
+    Supported climate zones: cold, composite, hot_dry, warm_humid, temperate.
+
+    Args:
+        building_type: Type of building (e.g. 'office', 'hospital', 'apartment_highrise')
+        climate_zone: Climate zone (e.g. 'composite', 'cold', 'hot_dry')
+
+    Returns:
+        JSON string with benchmark EPI value and available options
+
+    Examples:
+        get_epi_benchmark_tool("office", "composite")
+        get_epi_benchmark_tool("hospital", "hot_dry")
+    """
+    try:
+        logger.info(f"Getting EPI benchmark: {building_type} / {climate_zone}")
+        result = get_epi_benchmark(building_type, climate_zone)
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting EPI benchmark: {e}", exc_info=True)
+        return f"Error getting EPI benchmark: {str(e)}"
+
+
+# ---------------------------------------------------------------------------
+# Tool 7: calculate_epi
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def calculate_epi_tool(
+    idf_path: str,
+    simulation_output_dir: str,
+    building_type: str = "office",
+    climate_zone: str = "composite",
+) -> str:
+    """
+    Compute the Energy Performance Index (EPI) for a building.
+
+    This is a comprehensive tool that combines floor area calculation from IDF
+    geometry, annual energy extraction from simulation output, benchmark lookup,
+    and code compliance evaluation.
+
+    Prerequisites: A simulation must have been run first (use run_energyplus_simulation)
+    and output CSVs must exist in simulation_output_dir.
+
+    Args:
+        idf_path: Path to the IDF file (for floor area calculation)
+        simulation_output_dir: Directory containing EnergyPlus simulation CSV output
+        building_type: Building type for benchmark lookup
+                       (apartment_highrise, office, hospital, school, retail, hotel)
+        climate_zone: Climate zone for benchmark lookup
+                      (cold, composite, hot_dry, warm_humid, temperate)
+
+    Returns:
+        JSON string with proposed EPI, benchmark EPI, EPI ratio, compliance status,
+        energy breakdown, floor area, and performance summary
+
+    Examples:
+        calculate_epi_tool(
+            "/workspace/all_files/5ZoneAirCooled.idf",
+            "/workspace/outputs/sim_run",
+            "office",
+            "composite"
+        )
+    """
+    try:
+        logger.info(
+            f"Calculating EPI: {idf_path} | output={simulation_output_dir} | "
+            f"type={building_type} | climate={climate_zone}"
+        )
+        result = calculate_epi(idf_path, simulation_output_dir, building_type, climate_zone)
+        return json.dumps(result, indent=2)
+    except FileNotFoundError as e:
+        return f"File not found: {str(e)}"
+    except Exception as e:
+        logger.error(f"Error calculating EPI: {e}", exc_info=True)
+        return f"Error calculating EPI: {str(e)}"
 
 
 # ---------------------------------------------------------------------------
