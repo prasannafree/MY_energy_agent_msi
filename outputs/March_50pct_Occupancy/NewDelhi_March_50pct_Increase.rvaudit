@@ -1,0 +1,13 @@
+ ReadVarsESO
+ processing:/workspace/outputs/NewDelhi_March_50pct_Increase_c5c0f4.rvi
+ Requested ESO file=/workspace/outputs/March_50pct_Occupancy/NewDelhi_March_50pct_Increase.eso
+ does not exist.  ReadVarsESO program terminated.
+ ReadVarsESO program terminated.
+ ReadVarsESO
+ processing:/workspace/outputs/NewDelhi_March_50pct_Increase_c5c0f4.mvi
+ input file:/workspace/outputs/March_50pct_Occupancy/NewDelhi_March_50pct_Increase.mtr
+ output file:/workspace/outputs/March_50pct_Occupancy/NewDelhi_March_50pct_IncreaseMeter.csv
+ getting all vars from:/workspace/outputs/March_50pct_Occupancy/NewDelhi_March_50pct_Increase.mtr
+  number variables requested for output=           2
+ ReadVars Run Time=00hr 00min  0.05sec
+ ReadVarsESO program completed successfully.

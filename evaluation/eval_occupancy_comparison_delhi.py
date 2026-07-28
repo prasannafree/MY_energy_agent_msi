@@ -34,24 +34,10 @@ QUERY = (
 
 EXPECTED_TOOL_SEQUENCE = [
     "list_available_files",
-    "load_idf_model",
-    "inspect_people",
-    "check_simulation_settings",
-    "modify_run_period",
-    "add_output_meters",
-    "add_output_meters",
+    "run_energyplus_simulation",
     "modify_people",
     "run_energyplus_simulation",
-    "run_energyplus_simulation",
-    "create_interactive_plot",
-    "create_interactive_plot",
-    "create_interactive_plot",
-    "get_server_logs",
-    "copy_file",
-    "copy_file",
-    "run_energyplus_simulation",
-    "copy_file",
-    "copy_file"
+    "calculate_rmse_tool"
 ]
 
 NUM_RUNS = 5
