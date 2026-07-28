@@ -253,6 +253,31 @@ def run_ep_simulation(
     return result
 
 
+def _find_facility_electricity_col(columns: list) -> str:
+    """Find the total facility electricity demand or meter column, avoiding sub-component meters like chiller or pump electricity."""
+    cols_clean = [c.strip() for c in columns]
+    # Priority 1: Facility Total Electricity Demand Rate / Electricity:Facility
+    for c in cols_clean:
+        cl = c.lower()
+        if "facility total electricity demand rate" in cl or "electricity:facility" in cl:
+            return c
+    # Priority 2: Generic electricity demand rate excluding sub-components
+    for c in cols_clean:
+        cl = c.lower()
+        if "electricity demand rate" in cl and not any(sub in cl for sub in ["chiller", "boiler", "fan", "pump", "coil"]):
+            return c
+    # Priority 3: Any electricity meter excluding sub-components
+    for c in cols_clean:
+        cl = c.lower()
+        if "electricity" in cl and not any(sub in cl for sub in ["chiller", "boiler", "fan", "pump", "coil"]):
+            return c
+    # Fallback
+    for c in cols_clean:
+        if "electricity" in c.lower():
+            return c
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Tool 3: calculate_rmse
 # ---------------------------------------------------------------------------
@@ -282,29 +307,40 @@ def calculate_rmse(
     df_target.columns = df_target.columns.str.strip()
     df_sim.columns = df_sim.columns.str.strip()
 
-    # Try exact match first, then fuzzy match
+    # Try exact match first, then priority facility meter match
     if column_name not in df_target.columns:
-        matches = [c for c in df_target.columns if "Electricity Demand Rate" in c]
-        if matches:
-            column_name = matches[0]
+        found_col = _find_facility_electricity_col(df_target.columns)
+        if found_col:
+            column_name = found_col
         else:
             return {
                 "status": "error",
                 "message": f"Column not found in target CSV. Available: {list(df_target.columns)}",
             }
 
-    if column_name not in df_sim.columns:
-        matches = [c for c in df_sim.columns if "Electricity Demand Rate" in c]
-        if matches:
-            column_name = matches[0]
+    sim_column_name = column_name
+    if sim_column_name not in df_sim.columns:
+        found_sim = _find_facility_electricity_col(df_sim.columns)
+        if found_sim:
+            sim_column_name = found_sim
         else:
             return {
                 "status": "error",
                 "message": f"Column not found in simulation CSV. Available: {list(df_sim.columns)}",
             }
 
-    y_true = df_target[column_name].values
-    y_pred = df_sim[column_name].values
+    y_true = df_target[column_name].values.astype(float)
+    y_pred = df_sim[sim_column_name].values.astype(float)
+
+    if "[j]" in column_name.lower():
+        y_true = y_true / 3600.0
+    elif "[kwh]" in column_name.lower():
+        y_true = y_true * 1000.0
+
+    if "[j]" in sim_column_name.lower():
+        y_pred = y_pred / 3600.0
+    elif "[kwh]" in sim_column_name.lower():
+        y_pred = y_pred * 1000.0
 
     min_len = min(len(y_true), len(y_pred))
     y_true = y_true[:min_len]
@@ -366,13 +402,21 @@ def calibrate_occupancy(
 
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load the target column
+    # Load the target column using priority facility meter matching
     df_target = pd.read_csv(target_csv)
     df_target.columns = df_target.columns.str.strip()
-    target_col = [c for c in df_target.columns if "Electricity Demand Rate" in c]
-    if not target_col:
-        return {"status": "error", "message": "No electricity demand column in target CSV."}
-    target_values = df_target[target_col[0]].values
+    target_col_name = _find_facility_electricity_col(df_target.columns)
+    if not target_col_name:
+        return {"status": "error", "message": f"No facility electricity column in target CSV. Available: {list(df_target.columns)}"}
+    
+    target_series = df_target[target_col_name].values.astype(float)
+    # Automatic unit conversion: Joules [J] -> Watts [W] (divide by 3600 seconds/hour)
+    if "[j]" in target_col_name.lower():
+        target_series = target_series / 3600.0
+    elif "[kwh]" in target_col_name.lower():
+        target_series = target_series * 1000.0
+
+    target_values = target_series
 
     base_idf = IDF(str(idf_path))
     iteration_log = []
@@ -411,6 +455,10 @@ def calibrate_occupancy(
                 Variable_Name="Facility Total Electricity Demand Rate",
                 Reporting_Frequency="Hourly",
             )
+            sim_idf.newidfobject(
+                "OUTPUT:METER", Key_Name="Electricity:Facility",
+                Reporting_Frequency="Hourly",
+            )
             sim_idf.epw = str(epw_path)
             sim_idf.run(weather=str(epw_path), output_directory=str(iter_dir), readvars=True)
 
@@ -422,11 +470,16 @@ def calibrate_occupancy(
 
             df_sim = pd.read_csv(csv_file)
             df_sim.columns = df_sim.columns.str.strip()
-            sim_col = [c for c in df_sim.columns if "Electricity Demand Rate" in c]
-            if not sim_col:
+            sim_col_name = _find_facility_electricity_col(df_sim.columns)
+            if not sim_col_name:
                 return 1e10
 
-            y_pred = df_sim[sim_col[0]].values
+            y_pred = df_sim[sim_col_name].values.astype(float)
+            if "[j]" in sim_col_name.lower():
+                y_pred = y_pred / 3600.0
+            elif "[kwh]" in sim_col_name.lower():
+                y_pred = y_pred * 1000.0
+
             min_len = min(len(target_values), len(y_pred))
             rmse = float(np.sqrt(np.mean((target_values[:min_len] - y_pred[:min_len]) ** 2)))
 
