@@ -129,6 +129,7 @@ async def run_single_eval(
     agent_url: str,
     query: str,
     thread_id: str,
+    model: str = None,
 ) -> dict:
     """
     Execute a single evaluation run against the agent.
@@ -139,11 +140,19 @@ async def run_single_eval(
         "thread_id": thread_id,
         "session_id": thread_id,  # agent.py expects session_id
     }
-    response = await client.post(f"{agent_url}/api/chat", json=payload)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return {"error": f"HTTP {response.status_code}", "response": "", "tools_used": [], "trace": {}}
+    if model:
+        payload["model"] = model
+    try:
+        response = await client.post(f"{agent_url}/api/chat", json=payload)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"error": f"HTTP {response.status_code}: {response.text[:150]}", "response": "", "tools_used": [], "trace": {}}
+    except httpx.TimeoutException as e:
+        return {"error": f"TimeoutError: Request timed out ({type(e).__name__})", "response": "", "tools_used": [], "trace": {}}
+    except Exception as e:
+        err_msg = str(e).strip() or "Connection or network error"
+        return {"error": f"{type(e).__name__}: {err_msg}", "response": "", "tools_used": [], "trace": {}}
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +167,8 @@ async def run_evaluation(
     expected_arg_rules: dict,
     num_runs: int = 5,
     sleep_between_runs: int = 15,
+    model: str = None,
+    run_with_memory: bool = True,
 ):
     """
     Run the full evaluation in two modes:
@@ -172,20 +183,22 @@ async def run_evaluation(
     print(f"Query:              '{query}'")
     print(f"Expected Tools:     {expected_tool_sequence}")
     print(f"Runs per mode:      {num_runs}")
+    if model:
+        print(f"Model:              {model}")
     print()
 
     no_memory_results = []
     with_memory_results = []
 
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=900.0) as client:
         # Health check
         try:
             resp = await client.get(f"{agent_url}/api/health")
             if resp.status_code != 200:
                 print(f"Agent is not healthy (HTTP {resp.status_code}). Start it with `python agent.py` first.")
                 return [], []
-        except Exception:
-            print(f"Cannot connect to agent at {agent_url}. Start it with `python agent.py` first.")
+        except Exception as e:
+            print(f"Cannot connect to agent at {agent_url} ({type(e).__name__}). Start it with `python agent.py` first.")
             return [], []
 
         # ---------------------------------------------------------------
@@ -204,7 +217,7 @@ async def run_evaluation(
 
             start_time = time.time()
             try:
-                data = await run_single_eval(client, agent_url, query, thread_id)
+                data = await run_single_eval(client, agent_url, query, thread_id, model=model)
                 elapsed_time = time.time() - start_time
 
                 if "error" not in data or data.get("tools_used"):
@@ -223,7 +236,8 @@ async def run_evaluation(
                 no_memory_results.append(_build_exception_row(
                     run_id, elapsed_time, e, expected_tool_sequence, "no_memory"
                 ))
-                print(f"  -> Error: {e}")
+                err_detail = f"{type(e).__name__}: {e}".rstrip(": ")
+                print(f"  -> Error: {err_detail}")
 
             if i < num_runs - 1:
                 print(f"  -> Sleeping {sleep_between_runs}s...")
@@ -232,42 +246,44 @@ async def run_evaluation(
         # ---------------------------------------------------------------
         # MODE 2: WITH MEMORY (shared thread_id across all runs)
         # ---------------------------------------------------------------
-        print(f"\n{'─' * 60}")
-        print(f"  MODE 2: WITH MEMORY (shared thread across runs)")
-        print(f"{'─' * 60}\n")
+        if run_with_memory:
+            print(f"\n{'─' * 60}")
+            print(f"  MODE 2: WITH MEMORY (shared thread across runs)")
+            print(f"{'─' * 60}\n")
+    
+            shared_thread_id = f"eval_mem_{use_case_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-        shared_thread_id = f"eval_mem_{use_case_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            for i in range(num_runs):
+                run_id = i + 1
+                print(f"Run {run_id}/{num_runs}...")
+    
+                start_time = time.time()
+                try:
+                    data = await run_single_eval(client, agent_url, query, shared_thread_id, model=model)
+                    elapsed_time = time.time() - start_time
 
-        for i in range(num_runs):
-            run_id = i + 1
-            print(f"Run {run_id}/{num_runs}...")
-
-            start_time = time.time()
-            try:
-                data = await run_single_eval(client, agent_url, query, shared_thread_id)
-                elapsed_time = time.time() - start_time
-
-                if "error" not in data or data.get("tools_used"):
-                    row = _build_result_row(
-                        run_id, elapsed_time, data,
-                        expected_tool_sequence, expected_arg_rules, "with_memory"
-                    )
-                else:
-                    row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "with_memory")
-
-                with_memory_results.append(row)
-                print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
-
-            except Exception as e:
-                elapsed_time = time.time() - start_time
-                with_memory_results.append(_build_exception_row(
-                    run_id, elapsed_time, e, expected_tool_sequence, "with_memory"
-                ))
-                print(f"  -> Error: {e}")
-
-            if i < num_runs - 1:
-                print(f"  -> Sleeping {sleep_between_runs}s...")
-                await asyncio.sleep(sleep_between_runs)
+                    if "error" not in data or data.get("tools_used"):
+                        row = _build_result_row(
+                            run_id, elapsed_time, data,
+                            expected_tool_sequence, expected_arg_rules, "with_memory"
+                        )
+                    else:
+                        row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "with_memory")
+    
+                    with_memory_results.append(row)
+                    print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
+    
+                except Exception as e:
+                    elapsed_time = time.time() - start_time
+                    with_memory_results.append(_build_exception_row(
+                        run_id, elapsed_time, e, expected_tool_sequence, "with_memory"
+                    ))
+                    err_detail = f"{type(e).__name__}: {e}".rstrip(": ")
+                    print(f"  -> Error: {err_detail}")
+    
+                if i < num_runs - 1:
+                    print(f"  -> Sleeping {sleep_between_runs}s...")
+                    await asyncio.sleep(sleep_between_runs)
 
     return no_memory_results, with_memory_results
 
