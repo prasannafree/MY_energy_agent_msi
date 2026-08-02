@@ -9,6 +9,7 @@ let isProcessing = false;
 let messageHistory = [];
 let currentModel = localStorage.getItem("selected_model") || "gemini-3.5-flash";
 let delhiChartInstance = null;
+let currentSessionId = "session_" + Date.now();
 
 const chatArea = document.getElementById("chat-area");
 const welcomeScreen = document.getElementById("welcome-screen");
@@ -37,8 +38,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function showWelcomeScreen() {
-  if (welcomeScreen) {
-    welcomeScreen.style.display = "flex";
+  currentSessionId = "session_" + Date.now();
+  if (chatArea) {
+    chatArea.innerHTML = "";
+    if (welcomeScreen) {
+      welcomeScreen.style.display = "flex";
+      chatArea.appendChild(welcomeScreen);
+    }
   }
 }
 
@@ -434,7 +440,7 @@ async function sendMessage() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, model: currentModel }),
+      body: JSON.stringify({ message: text, model: currentModel, session_id: currentSessionId }),
     });
 
     const data = await res.json();
