@@ -27,6 +27,7 @@ from langchain_ollama import ChatOllama
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver  # NEW: in-memory conversation state
+from langgraph.errors import GraphRecursionError     # NEW: catch infinite loops
 import httpx
 
 load_dotenv()
@@ -183,25 +184,14 @@ CRITICAL RULES:
 
 14. After execution completes, ALWAYS provide the following sections:
 
-   =====================================================
-   EXECUTION SUMMARY
-   =====================================================
-   A concise summary of what was accomplished.
+ 
+   EXECUTION SUMMARY : A concise summary of what was accomplished.
 
-   =====================================================
-   TOOLS USED
-   =====================================================
-   List every tool that was actually invoked.
+   TOOLS USED :  List every tool that was actually invoked.
 
-   =====================================================
-   GENERATED FILES
-   =====================================================
-   List every file that was created or modified.
+   GENERATED FILES : List every file that was created or modified.
 
-   =====================================================
-   RESULTS
-   =====================================================
-   Present the important outputs, metrics, and observations.
+   RESULTS : Present the important outputs, metrics, and observations.
 
 
 15. Your primary objective is to minimize unnecessary user interaction. Discover information, validate inputs, execute appropriate tools, recover from recoverable errors, and complete engineering workflows autonomously whenever it is safe to do so."""
@@ -222,6 +212,11 @@ init_error = ""
 # For persistence across restarts, swap this for AsyncSqliteSaver or
 # AsyncPostgresSaver (from langgraph.checkpoint.sqlite / .postgres).
 memory_saver = MemorySaver()
+
+# Maximum number of LLM reasoning steps per request.
+# Prevents infinite tool-call loops that waste API tokens.
+# 25 steps = ~12 tool calls + LLM reasoning between each.
+MAX_AGENT_STEPS = 25
 
 
 def _get_executor(model_name: str):
@@ -675,7 +670,10 @@ async def chat(request: Request):
         logger.info(f"Chat [{model}] session=[{session_id}]: {user_msg[:100]}")
 
         thread_id = f"{session_id}:{model}"
-        config = {"configurable": {"thread_id": thread_id}}
+        config = {
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": MAX_AGENT_STEPS,
+        }
 
         payload = {"messages": [{"role": "user", "content": user_msg}]}
 
@@ -689,7 +687,8 @@ async def chat(request: Request):
                     f"(model={model}, session={session_id})"
                 )
                 retry_config = {
-                    "configurable": {"thread_id": f"{session_id}:{model}:fresh"}
+                    "configurable": {"thread_id": f"{session_id}:{model}:fresh"},
+                    "recursion_limit": MAX_AGENT_STEPS,
                 }
                 result = await executor.ainvoke(payload, config=retry_config)
             else:
@@ -837,6 +836,21 @@ async def chat(request: Request):
         response = _clean_response(user_msg, response)
 
         return JSONResponse({"response": response, "tools_used": tools_used, "trace": trace})
+
+    except GraphRecursionError:
+        logger.warning(
+            f"Agent hit recursion limit ({MAX_AGENT_STEPS} steps) "
+            f"for model={model}, session={session_id}. Stopping to prevent token waste."
+        )
+        return JSONResponse({
+            "response": (
+                f"⚠️ The agent reached the maximum step limit ({MAX_AGENT_STEPS} reasoning steps) "
+                "and was stopped to prevent excessive token usage. "
+                "This usually means the task hit an error loop. "
+                "Please try a simpler query or click 🏠 Home to start fresh."
+            ),
+            "tools_used": [],
+        })
 
     except Exception as e:
         logger.error(f"Chat error: {e}", exc_info=True)

@@ -158,11 +158,13 @@ async def run_evaluation(
     expected_arg_rules: dict,
     num_runs: int = 5,
     sleep_between_runs: int = 15,
+    skip_memory_mode: bool = True,
 ):
     """
-    Run the full evaluation in two modes:
+    Run the evaluation.
       1) WITHOUT memory: each run gets a fresh thread_id (independent runs)
       2) WITH memory: all runs share the same thread_id (agent remembers previous runs)
+         — skipped when skip_memory_mode=True (default) to reduce API token costs.
 
     Returns (no_memory_results, with_memory_results) as lists of dicts.
     """
@@ -232,42 +234,47 @@ async def run_evaluation(
         # ---------------------------------------------------------------
         # MODE 2: WITH MEMORY (shared thread_id across all runs)
         # ---------------------------------------------------------------
-        print(f"\n{'─' * 60}")
-        print(f"  MODE 2: WITH MEMORY (shared thread across runs)")
-        print(f"{'─' * 60}\n")
+        if skip_memory_mode:
+            print(f"\n{'─' * 60}")
+            print(f"  MODE 2: WITH MEMORY — SKIPPED (skip_memory_mode=True)")
+            print(f"{'─' * 60}\n")
+        else:
+            print(f"\n{'─' * 60}")
+            print(f"  MODE 2: WITH MEMORY (shared thread across runs)")
+            print(f"{'─' * 60}\n")
 
-        shared_thread_id = f"eval_mem_{use_case_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            shared_thread_id = f"eval_mem_{use_case_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-        for i in range(num_runs):
-            run_id = i + 1
-            print(f"Run {run_id}/{num_runs}...")
+            for i in range(num_runs):
+                run_id = i + 1
+                print(f"Run {run_id}/{num_runs}...")
 
-            start_time = time.time()
-            try:
-                data = await run_single_eval(client, agent_url, query, shared_thread_id)
-                elapsed_time = time.time() - start_time
+                start_time = time.time()
+                try:
+                    data = await run_single_eval(client, agent_url, query, shared_thread_id)
+                    elapsed_time = time.time() - start_time
 
-                if "error" not in data or data.get("tools_used"):
-                    row = _build_result_row(
-                        run_id, elapsed_time, data,
-                        expected_tool_sequence, expected_arg_rules, "with_memory"
-                    )
-                else:
-                    row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "with_memory")
+                    if "error" not in data or data.get("tools_used"):
+                        row = _build_result_row(
+                            run_id, elapsed_time, data,
+                            expected_tool_sequence, expected_arg_rules, "with_memory"
+                        )
+                    else:
+                        row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "with_memory")
 
-                with_memory_results.append(row)
-                print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
+                    with_memory_results.append(row)
+                    print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
 
-            except Exception as e:
-                elapsed_time = time.time() - start_time
-                with_memory_results.append(_build_exception_row(
-                    run_id, elapsed_time, e, expected_tool_sequence, "with_memory"
-                ))
-                print(f"  -> Error: {e}")
+                except Exception as e:
+                    elapsed_time = time.time() - start_time
+                    with_memory_results.append(_build_exception_row(
+                        run_id, elapsed_time, e, expected_tool_sequence, "with_memory"
+                    ))
+                    print(f"  -> Error: {e}")
 
-            if i < num_runs - 1:
-                print(f"  -> Sleeping {sleep_between_runs}s...")
-                await asyncio.sleep(sleep_between_runs)
+                if i < num_runs - 1:
+                    print(f"  -> Sleeping {sleep_between_runs}s...")
+                    await asyncio.sleep(sleep_between_runs)
 
     return no_memory_results, with_memory_results
 

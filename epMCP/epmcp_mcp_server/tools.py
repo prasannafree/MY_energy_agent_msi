@@ -805,7 +805,7 @@ def extract_annual_energy_kwh(output_directory: str) -> dict:
         # Pick the largest CSV as a heuristic
         csv_file = max(csv_files, key=lambda f: f.stat().st_size)
 
-    df = pd.read_csv(csv_file)
+    df = pd.read_csv(csv_file, on_bad_lines='warn')
     df.columns = [c.strip() for c in df.columns]
 
     total_elec_kwh = 0.0
