@@ -22,6 +22,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
@@ -37,7 +38,9 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip()
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+
 WORKSPACE_DIR = Path(__file__).parent.resolve()
 
 ALL_FILES_DIR = WORKSPACE_DIR / "all_files"
@@ -232,6 +235,13 @@ def _get_executor(model_name: str):
                 model=name, google_api_key=GOOGLE_API_KEY,
                 temperature=0.1, convert_system_message_to_human=False,
             )
+        elif name.startswith("deepseek"):
+            llm = ChatOpenAI(
+                model=name,
+                openai_api_key=DEEPSEEK_API_KEY,
+                openai_api_base="https://api.deepseek.com",
+                temperature=0.1,
+            )
         else:
             llm = ChatOllama(model=name, temperature=0.1)
         agent_executors[name] = create_react_agent(
@@ -410,6 +420,7 @@ async def health():
         "init_error": init_error if init_status == "error" else "",
         "model": GEMINI_MODEL,
         "api_key_set": bool(GOOGLE_API_KEY),
+        "deepseek_api_key_set": bool(DEEPSEEK_API_KEY),
     }
 
 
@@ -420,6 +431,8 @@ async def get_models():
         {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "provider": "google"},
         {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash", "provider": "google"},
         {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro", "provider": "google"},
+        {"id": "deepseek-chat", "name": "DeepSeek Chat (V3)", "provider": "deepseek"},
+        {"id": "deepseek-reasoner", "name": "DeepSeek Reasoner (R1)", "provider": "deepseek"},
     ]
     try:
         async with httpx.AsyncClient() as client:
@@ -651,6 +664,8 @@ async def chat(request: Request):
 
         if not GOOGLE_API_KEY and model.startswith("gemini"):
             return JSONResponse({"response": "⚠️ Set GOOGLE_API_KEY in .env and restart to use Gemini models.", "tools_used": []})
+        if not DEEPSEEK_API_KEY and model.startswith("deepseek"):
+            return JSONResponse({"response": "⚠️ Set DEEPSEEK_API_KEY in .env and restart to use DeepSeek models.", "tools_used": []})
 
         executor = _get_executor(model)
         if executor is None:
@@ -712,12 +727,18 @@ async def chat(request: Request):
             # Count LLM reasoning steps
             if hasattr(msg, "type") and msg.type == "ai":
                 total_llm_calls += 1
-                # Try to extract token usage (works for Gemini, may be None for Ollama)
+                # Try to extract token usage (works for Gemini, DeepSeek, OpenAI)
                 usage = getattr(msg, "usage_metadata", None)
                 if usage and isinstance(usage, dict):
                     has_token_info = True
                     total_prompt_tokens += usage.get("input_tokens", 0) or usage.get("prompt_tokens", 0)
                     total_completion_tokens += usage.get("output_tokens", 0) or usage.get("completion_tokens", 0)
+                elif hasattr(msg, "response_metadata") and isinstance(msg.response_metadata, dict):
+                    res_usage = msg.response_metadata.get("token_usage") or msg.response_metadata.get("usage")
+                    if res_usage and isinstance(res_usage, dict):
+                        has_token_info = True
+                        total_prompt_tokens += res_usage.get("prompt_tokens", 0) or res_usage.get("input_tokens", 0)
+                        total_completion_tokens += res_usage.get("completion_tokens", 0) or res_usage.get("output_tokens", 0)
 
             # Record every tool call
             if hasattr(msg, "tool_calls") and msg.tool_calls:
@@ -860,6 +881,7 @@ if __name__ == "__main__":
     port = 5000
     for p in range(5000, 5010):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind(("0.0.0.0", p))
                 port = p

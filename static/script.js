@@ -75,16 +75,24 @@ async function fetchModels() {
     const select = document.getElementById("model-select");
     if (!select || !data.models) return;
 
-    const groups = { google: [], ollama: [] };
+    const groups = { google: [], deepseek: [], ollama: [] };
     data.models.forEach((m) => {
       if (!groups[m.provider]) groups[m.provider] = [];
       groups[m.provider].push(m);
     });
 
     let html = "";
-    if (groups.google.length > 0) {
+    if (groups.google && groups.google.length > 0) {
       html += `<optgroup label="Google Gemini">`;
       groups.google.forEach(
+        (m) => (html += `<option value="${m.id}">${m.name}</option>`)
+      );
+      html += `</optgroup>`;
+    }
+
+    if (groups.deepseek && groups.deepseek.length > 0) {
+      html += `<optgroup label="DeepSeek AI">`;
+      groups.deepseek.forEach(
         (m) => (html += `<option value="${m.id}">${m.name}</option>`)
       );
       html += `</optgroup>`;
@@ -450,7 +458,7 @@ async function sendMessage() {
         []
       );
     } else if (res.ok) {
-      appendMessage("assistant", data.response, data.tools_used || []);
+      appendMessage("assistant", data.response, data.tools_used || [], data.trace);
     } else {
       appendMessage(
         "assistant",
@@ -472,7 +480,7 @@ async function sendMessage() {
   messageInput.focus();
 }
 
-function appendMessage(role, content, toolsUsed = []) {
+function appendMessage(role, content, toolsUsed = [], trace = null) {
   const msg = document.createElement("div");
   msg.className = `message ${role}`;
 
@@ -498,6 +506,19 @@ function appendMessage(role, content, toolsUsed = []) {
     toolBadgesHtml = `<div class="tools-container">${badges}</div>`;
   }
 
+  let tokenUsageHtml = "";
+  if (trace && trace.token_usage && trace.token_usage.total_tokens) {
+    const tu = trace.token_usage;
+    const promptToks = tu.prompt_tokens ? tu.prompt_tokens.toLocaleString() : "0";
+    const compToks = tu.completion_tokens ? tu.completion_tokens.toLocaleString() : "0";
+    const totalToks = tu.total_tokens.toLocaleString();
+    tokenUsageHtml = `
+      <div class="token-usage-badge" style="margin-top: 8px; font-size: 0.78rem; opacity: 0.85; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+        <span>📊 <strong>Tokens:</strong> ${totalToks}</span>
+        <span style="font-size: 0.72rem; opacity: 0.7;">(Prompt: ${promptToks} | Response: ${compToks})</span>
+      </div>`;
+  }
+
   msg.innerHTML = `
     <div class="message-avatar">${avatar}</div>
     <div class="message-content">
@@ -507,6 +528,7 @@ function appendMessage(role, content, toolsUsed = []) {
       </div>
       <div class="message-body">${renderMarkdown(content)}</div>
       ${toolBadgesHtml}
+      ${tokenUsageHtml}
     </div>
   `;
 
