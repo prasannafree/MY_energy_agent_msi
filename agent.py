@@ -243,7 +243,11 @@ def _get_executor(model_name: str):
                 temperature=0.1,
             )
         else:
-            llm = ChatOllama(model=name, temperature=0.1)
+            llm = ChatOllama(
+                model=name, 
+                temperature=0.1, 
+                client_kwargs={"timeout": None}
+            )
         agent_executors[name] = create_react_agent(
             llm,
             mcp_tools,

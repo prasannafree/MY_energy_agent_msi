@@ -100,15 +100,16 @@ async def calibrate_occupancy_tool(
     epw_path: str,
     target_csv_path: str,
     output_dir: str,
-    max_iterations: int = 25,
+    max_iterations: int = 20,
     multiplier_tolerance: float = 0.01,
     rmse_tolerance: float = 5.0,
     initial_guess: float = 1.0,
     search_min: float = 0.1,
     search_max: float = 5.0,
+    optimization_method: str = "Nelder-Mead",
 ) -> str:
     """
-    Automated calibration of occupancy multiplier using Nelder-Mead optimization.
+    Automated calibration of occupancy multiplier using advanced optimization methods.
 
     Iteratively adjusts the occupancy multiplier, runs EnergyPlus simulations,
     and compares results against measured/target data until the RMSE converges.
@@ -120,12 +121,13 @@ async def calibrate_occupancy_tool(
         epw_path: Path to the EPW weather file
         target_csv_path: Path to the ground truth / measured data CSV
         output_dir: Working directory for intermediate simulation files
-        max_iterations: Maximum number of optimization iterations (default: 25)
+        max_iterations: Maximum number of optimization iterations (default: 20, strictly capped)
         multiplier_tolerance: Convergence tolerance for the multiplier value (default: 0.01)
         rmse_tolerance: Convergence tolerance for RMSE in watts (default: 5.0)
         initial_guess: Starting multiplier value (default: 1.0)
         search_min: Minimum allowed multiplier (default: 0.1)
         search_max: Maximum allowed multiplier (default: 5.0)
+        optimization_method: Choice of optimizer (e.g. 'Nelder-Mead', 'Bayesian Optimization (Gaussian Process)', 'Differential Evolution (Genetic Algorithm)', 'Particle Swarm Optimization (PSO)')
 
     Returns:
         JSON string with optimal multiplier, final RMSE, iteration log
@@ -135,15 +137,16 @@ async def calibrate_occupancy_tool(
             "/workspace/model.idf",
             "/workspace/weather.epw",
             "/workspace/measured_data.csv",
-            "/workspace/calibration_output"
+            "/workspace/calibration_output",
+            optimization_method="Particle Swarm Optimization (PSO)"
         )
     """
     try:
-        logger.info(f"Starting occupancy calibration: {idf_path}")
+        logger.info(f"Starting occupancy calibration: {idf_path} with {optimization_method}")
         result = calibrate_occupancy(
             idf_path, epw_path, target_csv_path, output_dir,
             max_iterations, multiplier_tolerance, rmse_tolerance,
-            initial_guess, search_min, search_max,
+            initial_guess, search_min, search_max, optimization_method
         )
         return json.dumps(result, indent=2)
     except FileNotFoundError as e:

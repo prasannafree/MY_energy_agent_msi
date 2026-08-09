@@ -18,6 +18,13 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+try:
+    from skopt import gp_minimize
+    from skopt.space import Real
+    HAS_SKOPT = True
+except ImportError:
+    HAS_SKOPT = False
+
 # ---------------------------------------------------------------------------
 # Tkinter shim — geomeppy imports tkinter for its optional 3D geometry viewer.
 # The Docker container doesn't have Tk/X11 libraries. We mock the low-level
@@ -35,7 +42,7 @@ if "_tkinter" not in sys.modules:
     sys.modules["_tkinter"] = _fake_tk
 
 from geomeppy import IDF
-from scipy.optimize import minimize
+from scipy.optimize import minimize, differential_evolution
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +84,7 @@ def alter_occupancy_global(
     idf_path: str,
     multiplier: float,
     output_dir: str,
-    output_filename: str = "occupancy_modified.idf",
-) -> dict:
+    output_filename: str = "occupancy_modified.idf",) -> dict:
     """
     Scale occupancy in ALL zones of an IDF model by a multiplier.
 
@@ -160,15 +166,14 @@ def alter_occupancy_global(
 # Tool 2: run_ep_simulation
 # ---------------------------------------------------------------------------
 
-def run_ep_simulation(
+def run_ep_simulation(     
     idf_path: str,
     epw_path: str,
     output_dir: str,
     start_month: int = None,
     start_day: int = None,
     end_month: int = None,
-    end_day: int = None,
-) -> dict:
+    end_day: int = None,) -> dict:
     """
     Run an EnergyPlus simulation and produce eplusout.csv.
 
@@ -285,8 +290,7 @@ def _find_facility_electricity_col(columns: list) -> str:
 def calculate_rmse(
     target_csv_path: str,
     simulation_csv_path: str,
-    column_name: str = "Whole Building:Facility Total Electricity Demand Rate [W](Hourly)",
-) -> dict:
+    column_name: str = "Whole Building:Facility Total Electricity Demand Rate [W](Hourly)",) -> dict:
     """
     Calculate RMSE between a target (ground truth) CSV and a simulation CSV.
 
@@ -363,21 +367,53 @@ def calculate_rmse(
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Tool 4: calibrate_occupancy
 # ---------------------------------------------------------------------------
+
+def run_particle_swarm_local(obj_func, bounds, max_iter):
+    lb, ub = bounds[0]
+    num_particles = 5
+    max_steps = max(1, max_iter // num_particles)
+    positions = np.random.uniform(lb, ub, num_particles)
+    velocities = np.zeros(num_particles)
+    pbest_positions = copy.deepcopy(positions)
+    pbest_scores = np.full(num_particles, np.inf)
+    gbest_position = positions[0]
+    gbest_score = np.inf
+    w, c1, c2 = 0.5, 1.5, 1.5
+    eval_counter = 0
+
+    for step in range(max_steps):
+        for i in range(num_particles):
+            score = obj_func([positions[i]])
+            eval_counter += 1
+            if score < pbest_scores[i]:
+                pbest_scores[i] = score
+                pbest_positions[i] = positions[i]
+            if score < gbest_score:
+                gbest_score = score
+                gbest_position = positions[i]
+        r1, r2 = np.random.rand(num_particles), np.random.rand(num_particles)
+        velocities = (w * velocities +
+                      c1 * r1 * (pbest_positions - positions) +
+                      c2 * r2 * (gbest_position - positions))
+        positions = np.clip(positions + velocities, lb, ub)
+
+    return gbest_position, gbest_score, eval_counter, True, "PSO swarm execution completed."
 
 def calibrate_occupancy(
     idf_path: str,
     epw_path: str,
     target_csv_path: str,
     output_dir: str,
-    max_iterations: int = 25,
+    max_iterations: int = 20,
     multiplier_tolerance: float = 0.01,
     rmse_tolerance: float = 5.0,
     initial_guess: float = 1.0,
     search_min: float = 0.1,
     search_max: float = 5.0,
-) -> dict:
+    optimization_method: str = "Nelder-Mead",) -> dict:
     """
     Automated Nelder-Mead calibration of occupancy multiplier.
 
@@ -387,6 +423,9 @@ def calibrate_occupancy(
     Returns dict with optimal multiplier, final RMSE, iteration count.
     """
     _ensure_idd()
+    
+    # Enforce a hard upper limit of 20 iterations
+    max_iterations = min(max_iterations, 20)
 
     idf_path = Path(idf_path)
     epw_path = Path(epw_path)
@@ -491,24 +530,81 @@ def calibrate_occupancy(
             logger.error(f"Calibration iteration {iter_num} failed: {e}")
             return 1e10
 
-    result = minimize(
-        objective,
-        [initial_guess],
-        method="Nelder-Mead",
-        options={
-            "xatol": multiplier_tolerance,
-            "fatol": rmse_tolerance,
-            "maxiter": max_iterations,
-        },
-    )
+    search_bounds = [(search_min, search_max)]
+    
+    if optimization_method == "Bayesian Optimization (Gaussian Process)":
+        if not HAS_SKOPT:
+            return {"status": "error", "message": "skopt library is missing. Cannot run Bayesian Optimization."}
+        
+        space = [Real(search_bounds[0][0], search_bounds[0][1], name='multiplier')]
+        
+        def black_box_wrapper(val):
+            return objective(val)
+            
+        res = gp_minimize(
+            func=black_box_wrapper,
+            dimensions=space,
+            n_calls=max_iterations,
+            n_initial_points=max(3, min(5, max_iterations // 2)),
+            random_state=42
+        )
+        best_x = res.x[0]
+        best_f = res.fun
+        total_evals = len(res.func_vals)
+        success = True
+        msg = "Bayesian convergence process completed."
+        
+    elif optimization_method == "Differential Evolution (Genetic Algorithm)":
+        # DE evaluates the initial population (5 evaluations) + (generations * 5 evaluations)
+        # We adjust max_generations so the total simulations never exceed max_iterations
+        max_generations = max(1, (max_iterations - 5) // 5) if max_iterations > 5 else 1
+        res = differential_evolution(
+            func=objective,
+            bounds=search_bounds,
+            maxiter=max_generations,
+            popsize=5,
+            atol=rmse_tolerance,
+            tol=multiplier_tolerance,
+            seed=42,
+            polish=False
+        )
+        best_x = res.x[0]
+        best_f = res.fun
+        total_evals = res.nfev
+        success = res.success
+        msg = res.message
+        
+    elif optimization_method == "Particle Swarm Optimization (PSO)":
+        best_x, best_f, total_evals, success, msg = run_particle_swarm_local(
+            objective, search_bounds, max_iterations
+        )
+        
+    else:  # Default to Nelder-Mead
+        res = minimize(
+            objective,
+            [initial_guess],
+            method="Nelder-Mead",
+            bounds=search_bounds,
+            options={
+                "xatol": multiplier_tolerance,
+                "fatol": rmse_tolerance,
+                "maxiter": max_iterations,
+            },
+        )
+        best_x = res.x[0]
+        best_f = res.fun
+        total_evals = res.nit
+        success = res.success
+        msg = res.message
 
     return {
-        "status": "success" if result.success else "converged_by_threshold",
-        "optimal_multiplier": round(float(result.x[0]), 4),
-        "final_rmse_watts": round(float(result.fun), 2),
-        "total_iterations": result.nit,
-        "scipy_message": result.message,
+        "status": "success" if success else "converged_by_threshold",
+        "optimal_multiplier": round(float(best_x), 4),
+        "final_rmse_watts": round(float(best_f), 2),
+        "total_iterations": total_evals,
+        "scipy_message": msg,
         "iteration_log": iteration_log,
+        "optimization_method_used": optimization_method,
     }
 
 
@@ -537,8 +633,7 @@ def _parse_epw_weather(epw_path: str):
 def train_surrogate_model(
     cache_npz_path: str,
     epw_path: str,
-    idf_path: str = None,
-) -> dict:
+    idf_path: str = None,) -> dict:
     """
     Train a surrogate model from a pre-computed simulation cache (.npz file).
 
@@ -615,8 +710,7 @@ def train_surrogate_model(
 
 def predict_with_surrogate(
     target_csv_path: str = None,
-    initial_guess: float = 0.0,
-) -> dict:
+    initial_guess: float = 0.0,) -> dict:
     """
     Use trained surrogate model for instant occupancy calibration.
 
@@ -805,8 +899,21 @@ def extract_annual_energy_kwh(output_directory: str) -> dict:
         # Pick the largest CSV as a heuristic
         csv_file = max(csv_files, key=lambda f: f.stat().st_size)
 
-    df = pd.read_csv(csv_file)
-    df.columns = [c.strip() for c in df.columns]
+    try:
+        df = pd.read_csv(csv_file)
+    except Exception:
+        # Fallback for ragged EnergyPlus CSVs (mismatched column lengths)
+        with open(csv_file, 'r', encoding='utf-8-sig', errors='ignore') as f:
+            max_cols = max(len(line.split(',')) for line in f)
+        
+        # Read with dynamic column range to prevent ParserError
+        df = pd.read_csv(csv_file, names=range(max_cols), low_memory=False)
+        
+        # Promote first row to header
+        df.columns = df.iloc[0].fillna('').astype(str).tolist()
+        df = df[1:].reset_index(drop=True)
+
+    df.columns = [str(c).strip() for c in df.columns]
 
     total_elec_kwh = 0.0
     total_gas_kwh = 0.0
@@ -999,8 +1106,7 @@ def calculate_epi(
     idf_path: str,
     simulation_output_dir: str,
     building_type: str = "office",
-    climate_zone: str = "composite",
-) -> dict:
+    climate_zone: str = "composite",) -> dict:
     """
     Compute the Energy Performance Index (EPI) for a building.
 
@@ -1096,8 +1202,7 @@ def calculate_epi(
 def inspect_and_visualize_ifc(
     ifc_path: str,
     output_dir: str = "/workspace/outputs",
-    output_html_name: str = "ifc_3d_visualization.html",
-) -> dict:
+    output_html_name: str = "ifc_3d_visualization.html",) -> dict:
     """
     Inspect an IFC building model, extract storeys, spaces, and element metadata,
     and generate an interactive 3D HTML visualization file.

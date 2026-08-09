@@ -1,0 +1,222 @@
+Program Version:,EnergyPlus, Version 26.1.0-6f2e40d102, YMD=2026.08.09 18:47
+Tabular Output Report in Format: ,Comma
+
+Building:,OfficeLarge
+Environment:,RUNPERIOD 1 ** New.Delhi-Gandhi.Intl.AP DL IND SRC-TMYx WMO#=421810
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY TASKPURPOSE PROGRESSINDICATOR
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CODENAME ASHRAE901
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CODEYEAR 2019
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CODEAMENDMENT NONEAMEND
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY PROTOTYPENAME OFFICELARGE
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY TASKSCOPE NATIONAL
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY STATE NATIONAL
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY CLIMATEZONE 1B
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
+----------------------------------------------------------------------------------------------------
+REPORT:,NAMEHOLDERMONTHLYSUMMARY REPRESENTCITY IND_DELHI_NEWDELHI
+FOR:,Environment
+Custom Monthly Report
+
+,,SITE OUTDOOR AIR DRYBULB TEMPERATURE [C]
+,January,13.539
+,February,17.981
+,March,23.544
+,April,29.482
+,May,33.399
+,June,34.474
+,July,31.023
+,August,29.996
+,September,29.643
+,October,27.690
+,November,20.217
+,December,14.685
+,,
+,Annual Sum or Average,25.502
+,Minimum of Months,13.539
+,Maximum of Months,34.474
+
+
