@@ -158,6 +158,7 @@ async def run_evaluation(
     expected_arg_rules: dict,
     num_runs: int = 5,
     sleep_between_runs: int = 15,
+    custom_metric_extractor: callable = None,
 ):
     """
     Run the full evaluation in two modes:
@@ -210,10 +211,10 @@ async def run_evaluation(
                 if "error" not in data or data.get("tools_used"):
                     row = _build_result_row(
                         run_id, elapsed_time, data,
-                        expected_tool_sequence, expected_arg_rules, "no_memory"
+                        expected_tool_sequence, expected_arg_rules, "no_memory", custom_metric_extractor
                     )
                 else:
-                    row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "no_memory")
+                    row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "no_memory", custom_metric_extractor)
 
                 no_memory_results.append(row)
                 print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
@@ -250,10 +251,10 @@ async def run_evaluation(
                 if "error" not in data or data.get("tools_used"):
                     row = _build_result_row(
                         run_id, elapsed_time, data,
-                        expected_tool_sequence, expected_arg_rules, "with_memory"
+                        expected_tool_sequence, expected_arg_rules, "with_memory", custom_metric_extractor
                     )
                 else:
-                    row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "with_memory")
+                    row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "with_memory", custom_metric_extractor)
 
                 with_memory_results.append(row)
                 print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
@@ -276,7 +277,7 @@ async def run_evaluation(
 # Result Row Builders
 # ---------------------------------------------------------------------------
 
-def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mode):
+def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mode, custom_metric_extractor=None):
     """Build a result dict from a successful agent response."""
     tools_used_data = data.get("tools_used", [])
     trace = data.get("trace", {})
@@ -305,7 +306,7 @@ def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mod
     looping_rate = compute_looping_rate(tool_call_details)
     llm_steps = trace.get("total_llm_calls", 0)
 
-    return {
+    result = {
         "Run ID": run_id,
         "Mode": mode,
         "Time Taken (s)": round(elapsed_time, 2),
@@ -324,10 +325,18 @@ def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mod
         "Agent Reply Snippet": agent_reply[:100].replace('\n', ' ') + "...",
     }
 
+    if custom_metric_extractor:
+        try:
+            result.update(custom_metric_extractor(data))
+        except Exception as e:
+            print(f"Error in custom metric extractor: {e}")
 
-def _build_error_row(run_id, elapsed_time, data, expected_tools, mode):
+    return result
+
+
+def _build_error_row(run_id, elapsed_time, data, expected_tools, mode, custom_metric_extractor=None):
     """Build a result dict for an HTTP-level error."""
-    return {
+    result = {
         "Run ID": run_id,
         "Mode": mode,
         "Time Taken (s)": round(elapsed_time, 2),
@@ -345,6 +354,14 @@ def _build_error_row(run_id, elapsed_time, data, expected_tools, mode):
         "Total Tool Calls": 0,
         "Agent Reply Snippet": "",
     }
+
+    if custom_metric_extractor:
+        try:
+            result.update(custom_metric_extractor(data))
+        except Exception:
+            pass
+
+    return result
 
 
 def _build_exception_row(run_id, elapsed_time, exception, expected_tools, mode):
@@ -395,6 +412,11 @@ def generate_report(
         "Redundant Call Ratio", "Step Efficiency", "Looping Rate", "LLM Steps",
         "Expected Tools", "Actual Tools",
     ]
+
+    # Dynamically detect any custom metrics added to the DataFrame
+    all_cols = list(df_no_mem.columns) if not df_no_mem.empty else (list(df_with_mem.columns) if not df_with_mem.empty else [])
+    custom_cols = [c for c in all_cols if c not in display_cols and c not in ("Mode", "Agent Reply Snippet", "Total Tool Calls")]
+    display_cols.extend(custom_cols)
 
     for label, df in [("WITHOUT MEMORY", df_no_mem), ("WITH MEMORY", df_with_mem)]:
         total = len(df)

@@ -9,6 +9,7 @@ Requires-Dist: numpy
 Requires-Dist: pandas
 Requires-Dist: scipy
 Requires-Dist: scikit-learn
+Requires-Dist: scikit-optimize
 Requires-Dist: ifcopenshell
 Requires-Dist: shapely
 Requires-Dist: plotly

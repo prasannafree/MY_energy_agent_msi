@@ -4,6 +4,7 @@ numpy
 pandas
 scipy
 scikit-learn
+scikit-optimize
 ifcopenshell
 shapely
 plotly
