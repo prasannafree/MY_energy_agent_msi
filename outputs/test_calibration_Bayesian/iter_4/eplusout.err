@@ -1,0 +1,71 @@
+Program Version,EnergyPlus, Version 26.1.0-6f2e40d102, YMD=2026.08.10 11:35,
+   ** Warning ** Version: in IDF="25.1" not the same as expected="26.1"
+   ** Warning ** Version: in IDF="25.1" not the same as expected="26.1"
+   ************* Beginning Zone Sizing Calculations
+   ** Warning ** Weather file location will be used rather than entered (IDF) Location object.
+   **   ~~~   ** ..Location object=CHICAGO_IL_USA TMY2-94846
+   **   ~~~   ** ..Weather File Location=Denver Intl AP CO USA TMY3 WMO#=725650
+   **   ~~~   ** ..due to location differences, Latitude difference=[1.95] degrees, Longitude difference=[16.90] degrees.
+   **   ~~~   ** ..Time Zone difference=[1.0] hour(s), Elevation difference=[768.42] percent, [1460.00] meters.
+   ** Warning ** SetUpDesignDay: Entered DesignDay Barometric Pressure=99063 differs by more than 10% from Standard Barometric Pressure=83011.
+   **   ~~~   ** ...occurs in DesignDay=CHICAGO_IL_USA ANNUAL HEATING 99% DESIGN CONDITIONS DB, Standard Pressure (based on elevation) will be used.
+   ** Warning ** SetUpDesignDay: Entered DesignDay Barometric Pressure=99063 differs by more than 10% from Standard Barometric Pressure=83011.
+   **   ~~~   ** ...occurs in DesignDay=CHICAGO_IL_USA ANNUAL COOLING 1% DESIGN CONDITIONS DB/MCWB, Standard Pressure (based on elevation) will be used.
+   ************* Beginning System Sizing Calculations
+   ************* Beginning Plant Sizing Calculations
+   ** Warning ** In calculating the design coil UA for Coil:Cooling:Water OA COOLING COIL 1
+   **   ~~~   ** the apparatus dew-point is below the coil design inlet water temperature;
+   **   ~~~   ** the coil outlet design conditions will be changed to correct the problem.
+   **   ~~~   ** The initial design conditions are: Tair,in = 30.4122
+   **   ~~~   **                                    Wair,in = 1.822703E-002
+   **   ~~~   **                                    Twater,in = 7.0000
+   **   ~~~   **                                    Tair,out = 11.0000
+   **   ~~~   **                                    Wair,out = 8.000000E-003
+   **   ~~~   ** The revised design conditions are: Tair,out = 10.0121
+   **   ~~~   **                                    Wair,out = 8.399825E-003
+   ** Warning ** In calculating the design coil UA for Coil:Cooling:Water MAIN COOLING COIL 1
+   **   ~~~   ** the apparatus dew-point is below the coil design inlet water temperature;
+   **   ~~~   ** the coil outlet design conditions will be changed to correct the problem.
+   **   ~~~   ** The initial design conditions are: Tair,in = 20.9053
+   **   ~~~   **                                    Wair,in = 9.882330E-003
+   **   ~~~   **                                    Twater,in = 7.0000
+   **   ~~~   **                                    Tair,out = 11.9510
+   **   ~~~   **                                    Wair,out = 8.000000E-003
+   **   ~~~   ** The revised design conditions are: Tair,out = 10.4043
+   **   ~~~   **                                    Wair,out = 8.625769E-003
+   ************* Testing Individual Branch Integrity
+   ************* All Branches passed integrity testing
+   ************* Testing Individual Supply Air Path Integrity
+   ************* All Supply Air Paths passed integrity testing
+   ************* Testing Individual Return Air Path Integrity
+   ************* All Return Air Paths passed integrity testing
+   ************* No node connection errors were found.
+   ************* Beginning Simulation
+   ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   **   ~~~   **  Routine=PsyTwbFnTdbWPb, Environment=RUN PERIOD 1, at Simulation time=03/13 10:23 - 10:30
+   **   ~~~   **  Input Temperature=-692.91
+   ** Warning ** WetBulb not converged after 101 iterations(PsyTwbFnTdbWPb)
+   **   ~~~   **  Routine=Unknown, Environment=RUN PERIOD 1, at Simulation time=03/14 11:45 - 12:00
+   **   ~~~   **  Input Temperature = 6.69
+   **   ~~~   **  Input Humidity Ratio= 1.927576E-003
+   **   ~~~   **  Input Pressure = 82600.00
+   **   ~~~   **  Resultant Temperature= 5.56E-003
+   ************* Simulation Error Summary *************
+   *************
+   ************* ===== Recurring Error Summary =====
+   ************* The following recurring error messages occurred.
+   *************
+   *************  ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   *************  **   ~~~   **   This error occurred 2 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=-206.475311 C  Min=-692.915009 C
+   *************
+   *************  ** Warning ** WetBulb not converged after max iterations(PsyTwbFnTdbWPb)
+   *************  **   ~~~   **   This error occurred 1 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 3 Warning; 0 Severe Errors.
+   ************* EnergyPlus Completed Successfully-- 10 Warning; 0 Severe Errors; Elapsed Time=00hr 00min  4.70sec
