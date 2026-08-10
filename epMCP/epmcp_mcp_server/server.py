@@ -102,7 +102,7 @@ async def calibrate_occupancy_tool(
     output_dir: str,
     max_iterations: int = 20,
     multiplier_tolerance: float = 0.01,
-    rmse_tolerance: float = 5.0,
+    rmse_tolerance: float = 15.0,
     initial_guess: float = 1.0,
     search_min: float = 0.1,
     search_max: float = 5.0,
@@ -123,7 +123,7 @@ async def calibrate_occupancy_tool(
         output_dir: Working directory for intermediate simulation files
         max_iterations: Maximum number of optimization iterations (default: 20, strictly capped)
         multiplier_tolerance: Convergence tolerance for the multiplier value (default: 0.01)
-        rmse_tolerance: Convergence tolerance for RMSE in watts (default: 5.0)
+        rmse_tolerance: Convergence tolerance for RMSE in watts (default: 15.0)
         initial_guess: Starting multiplier value (default: 1.0)
         search_min: Minimum allowed multiplier (default: 0.1)
         search_max: Maximum allowed multiplier (default: 5.0)

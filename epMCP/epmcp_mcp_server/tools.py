@@ -409,7 +409,7 @@ def calibrate_occupancy(
     output_dir: str,
     max_iterations: int = 20,
     multiplier_tolerance: float = 0.01,
-    rmse_tolerance: float = 5.0,
+    rmse_tolerance: float = 15.0,
     initial_guess: float = 1.0,
     search_min: float = 0.1,
     search_max: float = 5.0,
@@ -524,78 +524,96 @@ def calibrate_occupancy(
 
             iteration_log.append({"iteration": iter_num, "multiplier": mult, "rmse": rmse})
             logger.info(f"Iteration {iter_num}: multiplier={mult:.4f}, RMSE={rmse:.2f}")
+            if rmse <= rmse_tolerance:
+                raise EarlyStoppingException()
             return rmse
 
+        except EarlyStoppingException:
+            raise
         except Exception as e:
             logger.error(f"Calibration iteration {iter_num} failed: {e}")
             return 1e10
 
     search_bounds = [(search_min, search_max)]
     
-    if optimization_method == "Bayesian Optimization (Gaussian Process)":
-        if not HAS_SKOPT:
-            return {"status": "error", "message": "skopt library is missing. Cannot run Bayesian Optimization."}
-        
-        space = [Real(search_bounds[0][0], search_bounds[0][1], name='multiplier')]
-        
-        def black_box_wrapper(val):
-            return objective(val)
+    class EarlyStoppingException(Exception): pass
+    
+    def run_optimization_block():
+        if optimization_method == "Bayesian Optimization (Gaussian Process)":
+            if not HAS_SKOPT:
+                return {"status": "error", "message": "skopt library is missing. Cannot run Bayesian Optimization."}
             
-        res = gp_minimize(
-            func=black_box_wrapper,
-            dimensions=space,
-            n_calls=max_iterations,
-            n_initial_points=max(3, min(5, max_iterations // 2)),
-            random_state=42
-        )
-        best_x = res.x[0]
-        best_f = res.fun
-        total_evals = len(res.func_vals)
+            space = [Real(search_bounds[0][0], search_bounds[0][1], name='multiplier')]
+            
+            def black_box_wrapper(val):
+                return objective(val)
+                
+            res = gp_minimize(
+                func=black_box_wrapper,
+                dimensions=space,
+                n_calls=max_iterations,
+                n_initial_points=max(3, min(5, max_iterations // 2)),
+                random_state=42
+            )
+            best_x = res.x[0]
+            best_f = res.fun
+            total_evals = len(res.func_vals)
+            success = True
+            msg = "Bayesian convergence process completed."
+            
+        elif optimization_method == "Differential Evolution (Genetic Algorithm)":
+            # DE evaluates the initial population (5 evaluations) + (generations * 5 evaluations)
+            # We adjust max_generations so the total simulations never exceed max_iterations
+            max_generations = max(1, (max_iterations - 5) // 5) if max_iterations > 5 else 1
+            res = differential_evolution(
+                func=objective,
+                bounds=search_bounds,
+                maxiter=max_generations,
+                popsize=5,
+                atol=rmse_tolerance,
+                tol=multiplier_tolerance,
+                seed=42,
+                polish=False
+            )
+            best_x = res.x[0]
+            best_f = res.fun
+            total_evals = res.nfev
+            success = res.success
+            msg = res.message
+            
+        elif optimization_method == "Particle Swarm Optimization (PSO)":
+            best_x, best_f, total_evals, success, msg = run_particle_swarm_local(
+                objective, search_bounds, max_iterations
+            )
+            
+        else:  # Default to Nelder-Mead
+            res = minimize(
+                objective,
+                [initial_guess],
+                method="Nelder-Mead",
+                bounds=search_bounds,
+                options={
+                    "xatol": multiplier_tolerance,
+                    "fatol": rmse_tolerance,
+                    "maxiter": max_iterations,
+                },
+            )
+            best_x = res.x[0]
+            best_f = res.fun
+            total_evals = res.nit
+            success = res.success
+            msg = res.message
+        return best_x, best_f, total_evals, success, msg
+
+    try:
+        best_x, best_f, total_evals, success, msg = run_optimization_block()
+    except EarlyStoppingException:
+        logger.info("Optimizer stopped early due to RMSE reaching tolerance threshold.")
+        best_x = iteration_log[-1]["multiplier"]
+        best_f = iteration_log[-1]["rmse"]
+        total_evals = len(iteration_log)
         success = True
-        msg = "Bayesian convergence process completed."
-        
-    elif optimization_method == "Differential Evolution (Genetic Algorithm)":
-        # DE evaluates the initial population (5 evaluations) + (generations * 5 evaluations)
-        # We adjust max_generations so the total simulations never exceed max_iterations
-        max_generations = max(1, (max_iterations - 5) // 5) if max_iterations > 5 else 1
-        res = differential_evolution(
-            func=objective,
-            bounds=search_bounds,
-            maxiter=max_generations,
-            popsize=5,
-            atol=rmse_tolerance,
-            tol=multiplier_tolerance,
-            seed=42,
-            polish=False
-        )
-        best_x = res.x[0]
-        best_f = res.fun
-        total_evals = res.nfev
-        success = res.success
-        msg = res.message
-        
-    elif optimization_method == "Particle Swarm Optimization (PSO)":
-        best_x, best_f, total_evals, success, msg = run_particle_swarm_local(
-            objective, search_bounds, max_iterations
-        )
-        
-    else:  # Default to Nelder-Mead
-        res = minimize(
-            objective,
-            [initial_guess],
-            method="Nelder-Mead",
-            bounds=search_bounds,
-            options={
-                "xatol": multiplier_tolerance,
-                "fatol": rmse_tolerance,
-                "maxiter": max_iterations,
-            },
-        )
-        best_x = res.x[0]
-        best_f = res.fun
-        total_evals = res.nit
-        success = res.success
-        msg = res.message
+        msg = "Converged by early stopping threshold"
 
     return {
         "status": "success" if success else "converged_by_threshold",

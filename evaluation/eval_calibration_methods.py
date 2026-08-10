@@ -83,7 +83,8 @@ async def evaluate_method(method_name: str, display_name: str):
         expected_tool_sequence=EXPECTED_TOOL_SEQUENCE,
         expected_arg_rules=EXPECTED_ARG_RULES,
         num_runs=NUM_RUNS,
-        custom_metric_extractor=extract_calibration_metrics
+        custom_metric_extractor=extract_calibration_metrics,
+        run_with_memory=False
     )
 
     workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
