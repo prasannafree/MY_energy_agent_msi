@@ -35,12 +35,11 @@ QUERY = (
 EXPECTED_TOOL_SEQUENCE = [
     "list_available_files",
     "run_energyplus_simulation",
+    "inspect_people",
     "modify_people",
     "run_energyplus_simulation",
     "calculate_rmse_tool"
 ]
-
-NUM_RUNS = 5
 
 # Argument validation rules for this use case
 EXPECTED_ARG_RULES = {
@@ -61,14 +60,22 @@ EXPECTED_ARG_RULES = {
 # ===========================================================================
 # Main
 # ===========================================================================
+import argparse
+
 async def main():
+    parser = argparse.ArgumentParser(description="Evaluate natural language occupancy comparison")
+    parser.add_argument("--model", type=str, default="qwen3.6:27b", help="LLM model to evaluate")
+    parser.add_argument("--runs", type=int, default=5, help="Number of runs per mode")
+    args = parser.parse_args()
+
     no_memory_results, with_memory_results = await run_evaluation(
         agent_url=AGENT_URL,
         use_case_name=USE_CASE_NAME,
         query=QUERY,
         expected_tool_sequence=EXPECTED_TOOL_SEQUENCE,
         expected_arg_rules=EXPECTED_ARG_RULES,
-        num_runs=NUM_RUNS,
+        num_runs=args.runs,
+        model=args.model
     )
 
     # Generate report
@@ -81,7 +88,6 @@ async def main():
         use_case_name=USE_CASE_NAME,
         reports_dir=reports_dir,
     )
-
 
 if __name__ == "__main__":
     asyncio.run(main())

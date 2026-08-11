@@ -233,19 +233,19 @@ def _get_executor(model_name: str):
         if name.startswith("gemini"):
             llm = ChatGoogleGenerativeAI(
                 model=name, google_api_key=GOOGLE_API_KEY,
-                temperature=0.1, convert_system_message_to_human=False,
+                temperature=0, convert_system_message_to_human=False,
             )
         elif name.startswith("deepseek"):
             llm = ChatOpenAI(
                 model=name,
                 openai_api_key=DEEPSEEK_API_KEY,
                 openai_api_base="https://api.deepseek.com",
-                temperature=0.1,
+                temperature=0,
             )
         else:
             llm = ChatOllama(
-                model=name, 
-                temperature=0.1, 
+                model=name,
+                temperature=0,
                 client_kwargs={"timeout": None}
             )
         agent_executors[name] = create_react_agent(
@@ -762,9 +762,22 @@ async def chat(request: Request):
                         )
                     else:
                         result_content = str(result_content) if result_content else ""
-                    error_keywords = ("Error", "File not found", "error:", "Exception", "not found")
-                    is_error = any(result_content.startswith(kw) or kw.lower() in result_content.lower()[:200]
-                                   for kw in error_keywords) if result_content else False
+                    # Error detection: match start-of-string error indicators.
+                    # Avoid false positives from normal content that mentions
+                    # "error" in passing (e.g., "RMSE error", "No errors found",
+                    # "Error handling is enabled").
+                    is_error = False
+                    if result_content:
+                        content_lower = result_content.lower()[:300]
+                        # Strong indicators: content STARTS with an error keyword
+                        error_starts = ("error", "file not found", "exception", "traceback",
+                                        "filenotfounderror", "valueerror", "typeerror",
+                                        "keyerror", "runtimeerror", "failed to")
+                        is_error = any(content_lower.startswith(kw) for kw in error_starts)
+                        # Also catch "Error:" or "ERROR:" patterns (tool returning an error)
+                        if not is_error:
+                            import re as _re
+                            is_error = bool(_re.match(r'^(error|ERROR|Error)\s*:', result_content.strip()))
 
                     tool_call_details.append({
                         "step": step_counter,

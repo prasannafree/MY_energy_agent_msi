@@ -17,7 +17,10 @@ import re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from eval_utils import run_evaluation, generate_report
 
+import argparse
+
 AGENT_URL = "http://127.0.0.1:5000"
+MODEL = "qwen3.6:27b"  # Default model to evaluate
 NUM_RUNS = 2  # As requested
 
 EXPECTED_TOOL_SEQUENCE = [
@@ -67,11 +70,13 @@ def extract_calibration_metrics(data: dict) -> dict:
     return metrics
 
 
-async def evaluate_method(method_name: str, display_name: str):
-    use_case_name = f"occupancy_calibration_{display_name.lower()}"
+async def evaluate_method(method_name: str, display_name: str, model: str = MODEL, runs: int = NUM_RUNS):
+    model_tag = model.replace(":", "_").replace(".", "_")
+    use_case_name = f"{model_tag}_occupancy_calibration_{display_name.lower()}"
     query = (
-        f"Calibrate the building occupancy for 5ZoneAirCooled.idf in Denver against "
-        f"measured_target.csv using the {method_name} algorithm. "
+        f"List available files first, then calibrate the building occupancy for "
+        f"/workspace/all_files/5ZoneAirCooled.idf using weather file /workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw "
+        f"against /workspace/all_files/measured_target.csv using the {method_name} algorithm. "
         f"Save the outputs to /workspace/outputs/test_calibration_{display_name} "
         f"and tell me the final calibrated multiplier."
     )
@@ -82,9 +87,10 @@ async def evaluate_method(method_name: str, display_name: str):
         query=query,
         expected_tool_sequence=EXPECTED_TOOL_SEQUENCE,
         expected_arg_rules=EXPECTED_ARG_RULES,
-        num_runs=NUM_RUNS,
+        num_runs=runs,
         custom_metric_extractor=extract_calibration_metrics,
-        run_with_memory=False
+        run_with_memory=False,
+        model=model,
     )
 
     workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -98,15 +104,29 @@ async def evaluate_method(method_name: str, display_name: str):
     )
 
 async def main():
-    methods = [
+    parser = argparse.ArgumentParser(description="Evaluate Calibration Methods against a specified LLM model")
+    parser.add_argument("--model", type=str, default=MODEL, help="LLM model to evaluate (e.g. qwen3.6:27b, gemini-2.5-flash, llama3.1:8b)")
+    parser.add_argument("--runs", type=int, default=NUM_RUNS, help="Number of runs per method (default: 2)")
+    parser.add_argument("--method", type=str, choices=["nelder_mead", "de", "pso", "bayesian", "all"], default="all", help="Specific method to evaluate")
+    args = parser.parse_args()
+
+    all_methods = [
         ("Nelder-Mead", "Nelder_Mead"),
         ("Differential Evolution", "DE"),
         ("Particle Swarm Optimization", "PSO"),
         ("Bayesian Optimization", "Bayesian")
     ]
+
+    if args.method != "all":
+        methods_to_run = [m for m in all_methods if m[1].lower() == args.method.lower()]
+    else:
+        methods_to_run = all_methods
     
-    for method, display_name in methods:
-        await evaluate_method(method, display_name)
+    print(f"\nEvaluating Model: {args.model}")
+    print(f"Methods to run:  {[m[0] for m in methods_to_run]}\n")
+
+    for method, display_name in methods_to_run:
+        await evaluate_method(method, display_name, model=args.model, runs=args.runs)
 
 if __name__ == "__main__":
     asyncio.run(main())
