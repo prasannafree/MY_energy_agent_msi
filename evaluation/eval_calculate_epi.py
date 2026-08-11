@@ -31,21 +31,13 @@ MODEL = "qwen3.6:27b"  # Default model to evaluate
 AGENT_URL = "http://127.0.0.1:5000"
 USE_CASE_NAME = "calculate_epi"
 QUERY = (
-    "Follow these exact steps in order:\n"
-    "1. Call list_available_files to see what files are available.\n"
-    "2. Call add_output_meters on /workspace/all_files/1ZoneUncontrolled.idf to add Electricity:Facility meter "
-    "and save the updated IDF to /workspace/outputs/epi_run/1ZoneUncontrolled_with_meters.idf.\n"
-    "3. Call add_output_meters again on the updated IDF to add NaturalGas:Facility meter.\n"
-    "4. Call run_energyplus_simulation with the updated IDF and weather file "
-    "/workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw, output to /workspace/outputs/epi_run.\n"
-    "5. Call calculate_epi_tool with idf_path=/workspace/outputs/epi_run/1ZoneUncontrolled_with_meters.idf, "
-    "simulation_output_dir=/workspace/outputs/epi_run, building_type=office, climate_zone=composite. "
-    "Then stop and report the EPI result."
+    "Calculate the Energy Performance Index (EPI) for the '1ZoneUncontrolled' building model using the Denver weather file. "
+    "Assume it is an office building in a composite climate zone. Please handle all the necessary setup, simulation, and calculations to give me the final EPI value."
 )
 
 EXPECTED_TOOL_SEQUENCE = [
     "list_available_files",
-    "add_output_meters",
+    "get_model_summary",
     "add_output_meters",
     "run_energyplus_simulation",
     "calculate_epi_tool",

@@ -24,7 +24,7 @@ from eval_utils import run_evaluation, generate_report
 # ===========================================================================
 AGENT_URL = "http://127.0.0.1:5000"
 USE_CASE_NAME = "occupancy_calibration"
-QUERY = "Calibrate the building occupancy for 5ZoneAirCooled.idf in Denver against measured_target.csv and give me the calibrated multiplier."
+QUERY = "Calibrate the building occupancy for 5ZoneAirCooled.idf in Denver against measured_target_5x.csv and give me the calibrated multiplier."
 
 EXPECTED_TOOL_SEQUENCE = [
     "list_available_files",

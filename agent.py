@@ -233,20 +233,21 @@ def _get_executor(model_name: str):
         if name.startswith("gemini"):
             llm = ChatGoogleGenerativeAI(
                 model=name, google_api_key=GOOGLE_API_KEY,
-                temperature=0, convert_system_message_to_human=False,
+                temperature=0, top_p=0.0, convert_system_message_to_human=False,
             )
         elif name.startswith("deepseek"):
             llm = ChatOpenAI(
                 model=name,
                 openai_api_key=DEEPSEEK_API_KEY,
                 openai_api_base="https://api.deepseek.com",
-                temperature=0,
+                temperature=0, top_p=0.001, model_kwargs={"seed": 42}
             )
         else:
             llm = ChatOllama(
                 model=name,
-                temperature=0,
-                client_kwargs={"timeout": None}
+                temperature=0, top_p=0.0, top_k=1,
+                client_kwargs={"timeout": None},
+                model_kwargs={"seed": 42}
             )
         agent_executors[name] = create_react_agent(
             llm,
