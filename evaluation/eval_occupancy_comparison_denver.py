@@ -1,7 +1,7 @@
 """
-Evaluation: Occupancy Comparison for New Delhi (March +50% Occupancy)
+Evaluation: Occupancy Comparison for Denver (March +50% Occupancy)
 
-Use Case: User asks to compare basecase electricity usage in New Delhi during March against a scenario with 50% increased occupancy.
+Use Case: User asks to compare basecase electricity usage in Denver during March against a scenario with 50% increased occupancy.
 Expected Tool Sequence: 
   1. list_available_files
   2. load_idf_model
@@ -32,9 +32,9 @@ from eval_utils import run_evaluation, generate_report
 # Configuration for this specific use case
 # ===========================================================================
 AGENT_URL = "http://127.0.0.1:5000"
-USE_CASE_NAME = "occupancy_comparison_delhi"
+USE_CASE_NAME = "occupancy_comparison_denver"
 QUERY = (
-    "I am in New Delhi, next month March 50 percent more people are going to come to the building. "
+    "I am in Denver, next month March 50 percent more people are going to come to the building. "
     "I need to compare the new electricity usage with the basecase. Give me the comparison using rmse value."
 )
 

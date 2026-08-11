@@ -12,13 +12,14 @@ import httpx
 import pandas as pd
 from datetime import datetime
 import os
+import shutil
 
 
 # ---------------------------------------------------------------------------
 # Metric Computation Functions
 # ---------------------------------------------------------------------------
 
-def compute_tool_selection_accuracy(expected_tools: list, actual_tools: list) -> float:
+def compute_tool_selection_accuracy(expected_tools: list, actual_tools: list, strict_tool_penalty: bool = True) -> float:
     """
     Measures how accurately the agent selected the right tools.
     Uses multiset (Counter) comparison to properly handle expected duplicates
@@ -36,8 +37,11 @@ def compute_tool_selection_accuracy(expected_tools: list, actual_tools: list) ->
     actual_counter = Counter(actual_tools)
     # Multiset intersection: min count for each tool
     intersection_size = sum((expected_counter & actual_counter).values())
-    denominator = max(len(expected_tools), len(actual_tools))
-    return intersection_size / denominator if denominator > 0 else 0.0
+    if strict_tool_penalty:
+        denominator = max(len(expected_tools), len(actual_tools))
+    else:
+        denominator = len(expected_tools)
+    return intersection_size / denominator if denominator > 0 else 0.00
 
 
 def compute_argument_precision(tool_call_details: list, arg_rules: dict) -> float:
@@ -206,6 +210,8 @@ async def run_evaluation(
     run_with_memory: bool = True,
     model: str = None,
     timeout: int = 1800,
+    reset_workspace: bool = True,
+    strict_tool_penalty: bool = True,
 ):
     """
     Run the full evaluation in two modes:
@@ -214,6 +220,31 @@ async def run_evaluation(
 
     Returns (no_memory_results, with_memory_results) as lists of dicts.
     """
+    workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    outputs_dir = os.path.join(workspace_dir, "outputs")
+
+    def _clean_outputs_dir():
+        if reset_workspace and os.path.exists(outputs_dir):
+            import subprocess
+            try:
+                # EnergyPlus runs via Docker as root, so the output files are root-owned.
+                # We use docker to clean them to avoid PermissionError on the host.
+                subprocess.run(
+                    ["docker", "run", "--rm", "--user", "root", "-v", f"{outputs_dir}:/clean_target", "energyplus-mcp-dev", "sh", "-c", "rm -rf /clean_target/*"],
+                    check=True,
+                    capture_output=True
+                )
+            except Exception as e:
+                print(f"Docker cleanup failed, falling back to os/shutil: {e}")
+                for filename in os.listdir(outputs_dir):
+                    file_path = os.path.join(outputs_dir, filename)
+                    try:
+                        if os.path.isfile(file_path) or os.path.islink(file_path):
+                            os.unlink(file_path)
+                        elif os.path.isdir(file_path):
+                            shutil.rmtree(file_path)
+                    except Exception as err:
+                        print(f"Failed to delete {file_path}. Reason: {err}")
     print(f"{'=' * 60}")
     print(f"  EVALUATION: {use_case_name}")
     print(f"{'=' * 60}")
@@ -250,6 +281,8 @@ async def run_evaluation(
             # Fresh thread_id ensures no memory carryover
             thread_id = f"eval_nomem_{use_case_name}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{run_id}"
 
+            _clean_outputs_dir()
+
             start_time = time.time()
             try:
                 data = await run_single_eval(client, agent_url, query, thread_id, model=model)
@@ -258,7 +291,7 @@ async def run_evaluation(
                 if "error" not in data or data.get("tools_used"):
                     row = _build_result_row(
                         run_id, elapsed_time, data,
-                        expected_tool_sequence, expected_arg_rules, "no_memory", custom_metric_extractor
+                        expected_tool_sequence, expected_arg_rules, "no_memory", custom_metric_extractor, strict_tool_penalty
                     )
                 else:
                     row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "no_memory", custom_metric_extractor)
@@ -291,6 +324,8 @@ async def run_evaluation(
                 run_id = i + 1
                 print(f"Run {run_id}/{num_runs}...")
     
+                _clean_outputs_dir()
+
                 start_time = time.time()
                 try:
                     data = await run_single_eval(client, agent_url, query, shared_thread_id, model=model)
@@ -325,7 +360,7 @@ async def run_evaluation(
 # Result Row Builders
 # ---------------------------------------------------------------------------
 
-def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mode, custom_metric_extractor=None):
+def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mode, custom_metric_extractor=None, strict_tool_penalty=True):
     """Build a result dict from a successful agent response."""
     tools_used_data = data.get("tools_used", [])
     trace = data.get("trace", {})
@@ -348,7 +383,7 @@ def _build_result_row(run_id, elapsed_time, data, expected_tools, arg_rules, mod
     task_success = not (Counter(expected_tools) - Counter(actual_tools))
 
     # Compute all metrics
-    tool_accuracy = compute_tool_selection_accuracy(expected_tools, actual_tools)
+    tool_accuracy = compute_tool_selection_accuracy(expected_tools, actual_tools, strict_tool_penalty=strict_tool_penalty)
     arg_precision = compute_argument_precision(tool_call_details, arg_rules)
     error_rate = compute_error_rate(tool_call_details)
     redundant_ratio = compute_redundant_ratio(tool_call_details, expected_tools)
