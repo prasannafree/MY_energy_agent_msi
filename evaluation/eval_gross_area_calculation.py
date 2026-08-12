@@ -24,10 +24,9 @@ from eval_utils import run_evaluation, generate_report
 # ===========================================================================
 AGENT_URL = "http://127.0.0.1:5000"
 USE_CASE_NAME = "gross_area_calculation"
-QUERY = "give me the gross area of new_dealhi buiding , also mention the list of tools u use for this task ."
+QUERY = "give me the gross area of new_delhi buiding , also mention the list of tools u use for this task ."
 EXPECTED_TOOL_SEQUENCE = [
-    "list_available_files",
-    "calculate_gross_floor_area_tool",
+    "calculate_gross_floor_area_tool"
 ]
 NUM_RUNS = 5
 

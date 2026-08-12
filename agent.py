@@ -235,7 +235,10 @@ def _get_executor(model_name: str):
                 model=name, google_api_key=GOOGLE_API_KEY,
                 temperature=0, top_p=0.0, convert_system_message_to_human=False,
             )
-        elif name.startswith("deepseek"):
+        elif name.startswith("deepseek") and ":" not in name:
+            # Only route to DeepSeek API for API model names (e.g. deepseek-chat,
+            # deepseek-reasoner). Ollama-tagged models like deepseek-r1:32b fall
+            # through to the ChatOllama branch below.
             llm = ChatOpenAI(
                 model=name,
                 openai_api_key=DEEPSEEK_API_KEY,
