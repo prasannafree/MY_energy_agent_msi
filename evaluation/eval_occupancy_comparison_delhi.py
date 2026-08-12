@@ -44,17 +44,13 @@ EXPECTED_TOOL_SEQUENCE = [
     "inspect_people",
     "check_simulation_settings",
     "modify_run_period",
+    "add_output_meters",
+    "add_output_meters",
+    "run_energyplus_simulation",
     "modify_people",
-    "add_output_meters",
-    "add_output_meters",
-    "add_output_meters",
-    "add_output_meters",
-    "run_energyplus_simulation",
     "run_energyplus_simulation",
     "extract_annual_energy_tool",
     "extract_annual_energy_tool",
-    "create_interactive_plot",
-    "create_interactive_plot",
     "calculate_rmse_tool"
 ]
 

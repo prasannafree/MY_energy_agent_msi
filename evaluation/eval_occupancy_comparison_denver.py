@@ -40,23 +40,19 @@ QUERY = (
 
 EXPECTED_TOOL_SEQUENCE = [
     "list_available_files",
-    "load_idf_model",
     "inspect_people",
     "check_simulation_settings",
     "modify_run_period",
-    "modify_people",
     "add_output_meters",
     "add_output_meters",
-    "add_output_meters",
-    "add_output_meters",
-    "run_energyplus_simulation",
-    "run_energyplus_simulation",
+    "run_energyplus_simulation", # Run basecase
+    "modify_people",             # Increase occupancy
+    "run_energyplus_simulation", # Run modified case
     "extract_annual_energy_tool",
     "extract_annual_energy_tool",
-    "create_interactive_plot",
-    "create_interactive_plot",
-    "calculate_rmse_tool"
+    "calculate_rmse_tool"        # Compare
 ]
+
 
 # Argument validation rules for this use case
 EXPECTED_ARG_RULES = {

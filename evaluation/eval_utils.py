@@ -297,7 +297,7 @@ async def run_evaluation(
                     row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "no_memory", custom_metric_extractor)
 
                 no_memory_results.append(row)
-                print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
+                print(f"  -> {elapsed_time:.2f}s | Task Success: {row['Task Success']} | Tools: {row['Actual Tools']}")
 
             except Exception as e:
                 elapsed_time = time.time() - start_time
@@ -340,7 +340,7 @@ async def run_evaluation(
                         row = _build_error_row(run_id, elapsed_time, data, expected_tool_sequence, "with_memory", custom_metric_extractor)
     
                     with_memory_results.append(row)
-                    print(f"  -> {elapsed_time:.2f}s | Success: {row['Success']} | Tools: {row['Actual Tools']}")
+                    print(f"  -> {elapsed_time:.2f}s | Task Success: {row['Task Success']} | Tools: {row['Actual Tools']}")
     
                 except Exception as e:
                     elapsed_time = time.time() - start_time
