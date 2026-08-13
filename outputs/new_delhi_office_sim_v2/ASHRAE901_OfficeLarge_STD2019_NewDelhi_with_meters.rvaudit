@@ -1,0 +1,16 @@
+ ReadVarsESO
+ processing:/workspace/outputs/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_meters_ec18be.rvi
+ input file:/workspace/outputs/new_delhi_office_sim_v2/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_meters.eso
+ output file:/workspace/outputs/new_delhi_office_sim_v2/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_meters.csv
+ getting all vars from:/workspace/outputs/new_delhi_office_sim_v2/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_meters.eso
+  number variables requested for output=           2
+ ReadVars Run Time=00hr 00min  0.11sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:/workspace/outputs/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_meters_ec18be.mvi
+ input file:/workspace/outputs/new_delhi_office_sim_v2/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_meters.mtr
+ output file:/workspace/outputs/new_delhi_office_sim_v2/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_metersMeter.csv
+ getting all vars from:/workspace/outputs/new_delhi_office_sim_v2/ASHRAE901_OfficeLarge_STD2019_NewDelhi_with_meters.mtr
+  number variables requested for output=           4
+ ReadVars Run Time=00hr 00min  0.13sec
+ ReadVarsESO program completed successfully.

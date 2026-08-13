@@ -34,8 +34,7 @@ from eval_utils import run_evaluation, generate_report
 AGENT_URL = "http://127.0.0.1:5000"
 USE_CASE_NAME = "occupancy_comparison_denver"
 QUERY = (
-    "I am in Denver, next month March 50 percent more people are going to come to the building. "
-    "I need to compare the new electricity usage with the basecase. Give me the comparison using rmse value."
+    "For new_delhi small office building , In the month of march increase the occupancy percentage by 20 percentage and comapre the new electricity usage with the basecase"
 )
 
 EXPECTED_TOOL_SEQUENCE = [
