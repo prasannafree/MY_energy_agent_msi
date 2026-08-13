@@ -1,0 +1,16 @@
+ ReadVarsESO
+ processing:/workspace/outputs/1ZoneUncontrolled_with_meters_fca159.rvi
+ input file:/workspace/outputs/sim_1zone_with_meters/1ZoneUncontrolled_with_meters.eso
+ output file:/workspace/outputs/sim_1zone_with_meters/1ZoneUncontrolled_with_meters.csv
+ getting all vars from:/workspace/outputs/sim_1zone_with_meters/1ZoneUncontrolled_with_meters.eso
+  number variables requested for output=          39
+ ReadVars Run Time=00hr 00min  0.26sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:/workspace/outputs/1ZoneUncontrolled_with_meters_fca159.mvi
+ input file:/workspace/outputs/sim_1zone_with_meters/1ZoneUncontrolled_with_meters.mtr
+ output file:/workspace/outputs/sim_1zone_with_meters/1ZoneUncontrolled_with_metersMeter.csv
+ getting all vars from:/workspace/outputs/sim_1zone_with_meters/1ZoneUncontrolled_with_meters.mtr
+  number variables requested for output=           4
+ ReadVars Run Time=00hr 00min  0.15sec
+ ReadVarsESO program completed successfully.

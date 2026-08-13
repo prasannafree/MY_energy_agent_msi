@@ -1,0 +1,5 @@
+Model,Use Case,Eval Key,Success Rate (%),Task Success Rate (%),Tool Selection Acc.,Avg Time (s),Avg LLM Steps,Avg Tool Calls,Avg Tool Error Rate,Avg Step Efficiency,Avg Redundant Ratio,Avg Looping Rate,Avg Prompt Tokens,Avg Completion Tokens,Error
+gemini-3.5-flash,occupancy_calibration_nelder_mead,eval_calibration_methods_Nelder_Mead,100.0,100.0,1.0,128.65,3.0,2.0,0.0,1.0,0.0,0.0,168530.2,2064.2,
+gemini-3.5-flash,occupancy_calibration_de,eval_calibration_methods_DE,100.0,100.0,1.0,35.25,3.0,2.0,0.0,1.0,0.0,0.0,167631.6,2204.6,
+gemini-3.5-flash,occupancy_calibration_pso,eval_calibration_methods_PSO,100.0,100.0,1.0,147.49,3.0,2.0,0.0,1.0,0.0,0.0,168732.8,2065.0,
+gemini-3.5-flash,occupancy_calibration_bayesian,eval_calibration_methods_Bayesian,0.0,0.0,0.0,56.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
