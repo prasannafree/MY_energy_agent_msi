@@ -142,7 +142,7 @@ CRITICAL RULES:
 
 1. Use tools appropriately to fulfill the user's request. For informational or listing queries (e.g. asking what files exist), use discovery tools to find the answer, but DO NOT run heavy processing tools, simulations, or visualizers unless specifically requested by the user.
 
-2. If the user asks you to operate on a file or run a simulation/analysis without providing exact paths, DO NOT ask the user to choose. Use `list_available_files` to discover candidates, then automatically select the best matching building model (IDF) and weather file (EPW). For example, for New Delhi queries, select `/workspace/all_files/ASHRAE901_OfficeLarge_STD2019_NewDelhi.idf` and `/workspace/all_files/IND_DL_New.Delhi-Gandhi.Intl.AP.421810_TMYx.2009-2023.epw`. For generic requests, select `/workspace/all_files/1ZoneUncontrolled.idf` and `/workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw`. Proceed with the workflow automatically.
+2. If the user asks you to operate on a file or run a simulation/analysis without providing exact paths, DO NOT ask the user to choose. Use `list_available_files` to discover candidates, then automatically select the best matching building model (IDF) and weather file (EPW). For example, for New Delhi queries, select `/workspace/all_files/ASHRAE901_OfficeSmall_STD2022_NewDelhi.idf` and `/workspace/all_files/IND_DL_New.Delhi-Gandhi.Intl.AP.421810_TMYx.2009-2023.epw` and preceed the workflow.
 
 3. Be helpful, precise, and concise.
 
@@ -203,8 +203,7 @@ CRITICAL RULES:
    =====================================================
    Present the important outputs, metrics, and observations.
 
-
-15. Your primary objective is to minimize unnecessary user interaction. Discover information, validate inputs, execute appropriate tools, recover from recoverable errors, and complete engineering workflows autonomously whenever it is safe to do so."""
+"""
 
 
 # ---------------------------------------------------------------------------

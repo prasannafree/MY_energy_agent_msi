@@ -28,11 +28,11 @@ MODEL = "qwen3.6:27b"  # Default model to evaluate
 # ===========================================================================
 # Configuration for this specific use case
 # ===========================================================================
-AGENT_URL = "http://127.0.0.1:5000"
+AGENT_URL = "http://127.0.0.1:5001"
 USE_CASE_NAME = "calculate_epi"
 QUERY = (
-    "Calculate the Energy Performance Index (EPI) for the '1ZoneUncontrolled' building model using the Denver weather file. "
-    "Assume it is an office building in a composite climate zone. Please handle all the necessary setup, simulation, and calculations to give me the final EPI value."
+    "Calculate the Energy Performance Index (EPI) for the New_delhi large_office building model using the New_delhi weather file. "
+    "Please handle all the necessary setup, simulation, and calculations to give me the final EPI value."
 )
 
 EXPECTED_TOOL_SEQUENCE = [
