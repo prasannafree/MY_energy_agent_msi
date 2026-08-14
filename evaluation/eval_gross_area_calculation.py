@@ -23,8 +23,8 @@ from eval_utils import run_evaluation, generate_report
 # Configuration for this specific use case
 # ===========================================================================
 AGENT_URL = "http://127.0.0.1:5000"
-USE_CASE_NAME = "gross_area_calculation"
-QUERY = "give me the gross area of new_dealhi buiding , also mention the list of tools u use for this task ."
+USE_CASE_NAME = "Conditioned area calculation"
+QUERY = "calculate total conditioned building area of the new_delhi small office building 2022 ."
 EXPECTED_TOOL_SEQUENCE = [
     "list_available_files",
     "calculate_gross_floor_area_tool",
@@ -43,14 +43,28 @@ EXPECTED_ARG_RULES = {
 # ===========================================================================
 # Main
 # ===========================================================================
+import argparse
+
 async def main():
+    parser = argparse.ArgumentParser(description="Evaluate Gross Area Calculation")
+    parser.add_argument("--model", type=str, default="qwen3.6:27b", help="LLM model to evaluate")
+    parser.add_argument("--runs", type=int, default=NUM_RUNS, help="Number of runs")
+    args = parser.parse_args()
+
+    model_tag = args.model.replace(":", "_").replace(".", "_")
+    use_case_name = f"{model_tag}_{USE_CASE_NAME.replace(' ', '_').lower()}"
+
+    print(f"\nEvaluating Model: {args.model} on {USE_CASE_NAME}\n")
+
     no_memory_results, with_memory_results = await run_evaluation(
         agent_url=AGENT_URL,
-        use_case_name=USE_CASE_NAME,
+        use_case_name=use_case_name,
         query=QUERY,
         expected_tool_sequence=EXPECTED_TOOL_SEQUENCE,
         expected_arg_rules=EXPECTED_ARG_RULES,
-        num_runs=NUM_RUNS,
+        num_runs=args.runs,
+        model=args.model,
+        run_with_memory=False,
     )
 
     # Generate report
@@ -60,7 +74,7 @@ async def main():
     generate_report(
         no_memory_results=no_memory_results,
         with_memory_results=with_memory_results,
-        use_case_name=USE_CASE_NAME,
+        use_case_name=use_case_name,
         reports_dir=reports_dir,
     )
 

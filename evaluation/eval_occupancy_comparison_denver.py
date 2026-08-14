@@ -31,7 +31,7 @@ from eval_utils import run_evaluation, generate_report
 # ===========================================================================
 # Configuration for this specific use case
 # ===========================================================================
-AGENT_URL = "http://127.0.0.1:5001"
+AGENT_URL = "http://127.0.0.1:5000"
 USE_CASE_NAME = "occupancy_comparison_delhi"
 QUERY = (
     "I am in New_delhi large building , next month March 50 percent more people are going to come to the building. "

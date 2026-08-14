@@ -1,10 +1,19 @@
 """
-Evaluation: Automated Occupancy Calibration
+Evaluation: Occupancy Comparison for Denver (March +50% Occupancy)
 
-Use Case: User asks to calibrate building occupancy for 5ZoneAirCooled.idf using Denver.epw against measured_target.csv.
+Use Case: User asks to compare basecase electricity usage in Denver during March against a scenario with 50% increased occupancy.
 Expected Tool Sequence: 
   1. list_available_files
-  2. calibrate_occupancy_tool
+  2. load_idf_model
+  3. inspect_people
+  4. check_simulation_settings
+  5. modify_run_period
+  6. modify_people
+  7. add_output_meters (x4)
+  8. run_energyplus_simulation (x2)
+  9. extract_annual_energy_tool (x2)
+  10. create_interactive_plot (x2)
+  11. calculate_rmse_tool
 
 This script runs the evaluation in two modes:
   1) WITHOUT memory — each run is independent (fresh thread_id)
@@ -23,22 +32,33 @@ from eval_utils import run_evaluation, generate_report
 # Configuration for this specific use case
 # ===========================================================================
 AGENT_URL = "http://127.0.0.1:5000"
-USE_CASE_NAME = "occupancy_calibration"
-QUERY = "Calibrate the building occupancy for 5ZoneAirCooled.idf in Denver against measured_target_5x.csv and give me the calibrated multiplier."
+USE_CASE_NAME = "lighting_comparison_delhi"
+QUERY = (
+    "For the New_delhi small office building 2022, reduce the lighting power density by 10 percent for all zones. "
+    "Compare the annual energy consumption of the modified building with the basecase of energy consumption ."
+
+)
 
 EXPECTED_TOOL_SEQUENCE = [
     "list_available_files",
-    "calibrate_occupancy_tool"
+    "inspect_lights",
+    "add_output_meters",
+    "run_energyplus_simulation",   # Run basecase
+    "modify_lights",               # Reduce lighting by 10%
+    "run_energyplus_simulation",   # Run modified case
+    "extract_annual_energy_tool",
+    "extract_annual_energy_tool",
 ]
 
-NUM_RUNS = 5
 
 # Argument validation rules for this use case
 EXPECTED_ARG_RULES = {
     "list_available_files": {},
-    "calibrate_occupancy_tool": {
+    "run_energyplus_simulation": {
         "idf_path": lambda v: isinstance(v, str) and ".idf" in v,
-        "target_csv_path": lambda v: isinstance(v, str) and ".csv" in v,
+    },
+    "modify_lights": {
+        "idf_path": lambda v: isinstance(v, str) and ".idf" in v,
     },
 }
 
@@ -46,14 +66,24 @@ EXPECTED_ARG_RULES = {
 # ===========================================================================
 # Main
 # ===========================================================================
+import argparse
+
 async def main():
+    parser = argparse.ArgumentParser(description="Evaluate natural language occupancy comparison")
+    parser.add_argument("--model", type=str, default="qwen3.6:27b", help="LLM model to evaluate")
+    parser.add_argument("--runs", type=int, default=5, help="Number of runs per mode")
+    args = parser.parse_args()
+
     no_memory_results, with_memory_results = await run_evaluation(
         agent_url=AGENT_URL,
         use_case_name=USE_CASE_NAME,
         query=QUERY,
         expected_tool_sequence=EXPECTED_TOOL_SEQUENCE,
         expected_arg_rules=EXPECTED_ARG_RULES,
-        num_runs=NUM_RUNS,
+        num_runs=args.runs,
+        model=args.model,
+        run_with_memory=False,
+        strict_tool_penalty=False
     )
 
     # Generate report
@@ -66,7 +96,6 @@ async def main():
         use_case_name=USE_CASE_NAME,
         reports_dir=reports_dir,
     )
-
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -75,8 +75,8 @@ async def evaluate_method(method_name: str, display_name: str, model: str = MODE
     use_case_name = f"{model_tag}_occupancy_calibration_{display_name.lower()}"
     query = (
         f"List available files first, then calibrate the building occupancy for "
-        f"/workspace/all_files/5ZoneAirCooled.idf using weather file /workspace/all_files/USA_CO_Denver.Intl.AP.725650_TMY3.epw "
-        f"against /workspace/all_files/measured_target.csv using the {method_name} algorithm. "
+        f"/workspace/all_files/ASHRAE901_OfficeSmall_STD2022_NewDelhi.idf using weather file /workspace/all_files/IND_DL_New.Delhi-Gandhi.Intl.AP.421810_TMYx.2009-2023.epw "
+        f"against /workspace/all_files/my_target_delhi_small.csv using the {method_name} algorithm. "
         f"Save the outputs to /workspace/outputs/test_calibration_{display_name} "
         f"and tell me the final calibrated multiplier."
     )
